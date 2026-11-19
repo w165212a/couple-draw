@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>双人默契大作战 💕 你画我猜</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+    <!-- 顶部状态栏 -->
+    <header class="header">
+      <div class="room-pill" id="roomBtn" title="点击复制分享链接">
+        <span class="room-icon">🔗</span>
+        <span id="roomNameDisplay">房间: sweet520</span>
+      </div>
+
+      <div class="status-indicator" id="statusIndicator">
+        <span class="dot"></span>
+        <span id="statusText">正在连接...</span>
+      </div>
+
+      <button class="icon-btn" id="addWordBtn" title="投喂属于你们的专属词">
+        <span>+ 投喂新词</span>
+      </button>
+    </header>
+
+    <!-- 题目/角色提示横幅 -->
+    <section class="topic-banner" id="topicBanner">
+      <div class="topic-content">
+        <span class="role-badge" id="roleBadge">请稍候</span>
+        <span class="topic-word" id="topicWord">等待对方加入中...</span>
+        <span class="category-tag" id="categoryTag">恋爱小世界</span>
+      </div>
+      <div class="timer-box" id="timerBox">
+        <span id="timerText">--</span>s
+      </div>
+    </section>
+
+    <!-- 主画板区域 -->
+    <main class="canvas-wrapper">
+      <div class="canvas-container" id="canvasContainer">
+        <canvas id="paintCanvas"></canvas>
+        <!-- 弹幕浮动层 -->
+        <div class="reaction-layer" id="reactionLayer"></div>
+      </div>
+
+      <!-- 画笔工具栏（仅画手可见/可用） -->
+      <div class="tools-bar" id="toolsBar">
+        <div class="color-palette">
+          <button class="color-dot active" data-color="#2d3436" style="background: #2d3436;"></button>
+          <button class="color-dot" data-color="#ff4757" style="background: #ff4757;"></button>
+          <button class="color-dot" data-color="#ff6b81" style="background: #ff6b81;"></button>
+          <button class="color-dot" data-color="#ffa502" style="background: #ffa502;"></button>
+          <button class="color-dot" data-color="#2ed573" style="background: #2ed573;"></button>
+          <button class="color-dot" data-color="#1e90ff" style="background: #1e90ff;"></button>
+          <button class="color-dot" data-color="#8854d0" style="background: #8854d0;"></button>
+          <button class="color-dot" data-color="#795548" style="background: #795548;"></button>
+        </div>
+
+        <div class="action-tools">
+          <button class="tool-btn eraser-btn" id="eraserBtn" title="橡皮擦">🧹 橡皮</button>
+          <button class="tool-btn clear-btn" id="clearBtn" title="清空画板">🗑️ 清屏</button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部互动与猜词区域 -->
+    <footer class="interaction-footer">
+      <!-- 快捷调侃表情/气泡弹幕 -->
+      <div class="quick-reactions">
+        <button class="reaction-btn" data-emoji="🎨" data-text="灵魂画手上线了！">🎨 灵魂画手</button>
+        <button class="reaction-btn" data-emoji="🤔" data-text="这是啥呀完全看不懂~">🤔 这是啥呀</button>
+        <button class="reaction-btn" data-emoji="🥺" data-text="给点提示嘛宝贝~">🥺 给点提示</button>
+        <button class="reaction-btn" data-emoji="💡" data-text="我快猜到了！">💡 快猜到了</button>
+        <button class="reaction-btn" data-emoji="💯" data-text="太像了太神了！">💯 绝了太像了</button>
+      </div>
+
+      <!-- 猜词输入与实时反馈 -->
+      <div class="chat-guess-area">
+        <div class="chat-bubble-stream" id="chatStream">
+          <div class="chat-hint">猜词记录将在此展示~</div>
+        </div>
+
+        <form class="guess-form" id="guessForm">
+          <input 
+            type="text" 
+            id="guessInput" 
+            class="guess-input" 
+            placeholder="输入你猜的词，回车发送..." 
+            autocomplete="off"
+            maxlength="20"
+          >
+          <button type="submit" class="send-btn" id="sendBtn">发送</button>
+        </form>
+      </div>
+    </footer>
+
+    <!-- 名字录入弹窗 (首次进入) -->
+    <div class="modal-overlay" id="nameModal">
+      <div class="modal-card">
+        <h3>💕 欢迎进入专属小游戏</h3>
+        <p>你希望对方怎么称呼你呢？</p>
+        <input type="text" id="nameInput" class="modal-input" placeholder="例如：大聪明 / 仙女宝贝" maxlength="10">
+        <button class="primary-btn" id="confirmNameBtn">进入小世界</button>
+      </div>
+    </div>
+
+    <!-- 投喂专属新词弹窗 -->
+    <div class="modal-overlay" id="wordModal" style="display: none;">
+      <div class="modal-card">
+        <h3>💌 投喂属于你们的专属回忆</h3>
+        <p>输入只有你们懂的梗、去过的地方或美食：</p>
+        <input type="text" id="newWordInput" class="modal-input" placeholder="例如：第一次喝的奶茶 / 踩我脚" maxlength="16">
+        <div class="modal-actions">
+          <button class="cancel-btn" id="closeWordModalBtn">取消</button>
+          <button class="primary-btn" id="submitWordBtn">悄悄存入词库</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 猜中胜利：拍立得画作回忆卡弹窗 -->
+    <div class="modal-overlay" id="victoryModal" style="display: none;">
+      <div class="modal-card polaroid-card">
+        <div class="polaroid-header">
+          <span class="heart-icon">💖</span>
+          <h4>心有灵犀！猜中啦！</h4>
+        </div>
+        
+        <div class="polaroid-img-wrapper">
+          <img id="polaroidImage" src="" alt="画作回忆卡">
+        </div>
+
+        <p class="polaroid-tip">📱 手机端长按上方图片即可保存到相册</p>
+        
+        <div class="next-round-countdown" id="nextRoundTimer">
+          下一局将在 <span>7</span> 秒后自动开始...
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 引入 Socket.io 客户端脚本 -->
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

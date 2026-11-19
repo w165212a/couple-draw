@@ -1,0 +1,583 @@
+/* 全局重置与基础设定 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+:root {
+  --bg-color: #FAF6F0;
+  --card-bg: #FFFFFF;
+  --primary-pink: #FF6B81;
+  --primary-pink-hover: #EE5253;
+  --soft-pink: #FFF0F2;
+  --accent-yellow: #FECA57;
+  --text-main: #2F3542;
+  --text-muted: #8A95A5;
+  --border-color: #E8E2D9;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 8px 24px rgba(255, 107, 129, 0.12);
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: var(--bg-color);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  color: var(--text-main);
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+
+/* 整体容器 */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top, 8px) 12px env(safe-area-inset-bottom, 8px) 12px;
+  position: relative;
+}
+
+/* 顶部状态栏 */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  flex-shrink: 0;
+}
+
+.room-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #FFF;
+  border: 1px solid var(--border-color);
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s ease;
+}
+
+.room-pill:active {
+  transform: scale(0.96);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.status-indicator .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #FF9F43;
+}
+
+.status-indicator.connected .dot {
+  background: #10AC84;
+}
+
+.icon-btn {
+  background: var(--soft-pink);
+  color: var(--primary-pink);
+  border: 1px solid rgba(255, 107, 129, 0.3);
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.icon-btn:active {
+  transform: scale(0.95);
+  background: #FFE3E7;
+}
+
+/* 题目与角色横幅 */
+.topic-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin-top: 4px;
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.topic-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.role-badge {
+  background: var(--primary-pink);
+  color: #FFF;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.topic-word {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-tag {
+  font-size: 11px;
+  background: #F1F2F6;
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.timer-box {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-pink);
+  background: var(--soft-pink);
+  padding: 4px 10px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+/* 主画板区域 */
+.canvas-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  margin: 8px 0;
+  position: relative;
+}
+
+.canvas-container {
+  flex: 1;
+  position: relative;
+  background: #FFFFFF;
+  border: 2px solid #EBE4DA;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+#paintCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 弹幕浮动层 */
+.reaction-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.reaction-bubble {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid #FFE4E8;
+  padding: 6px 14px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(255, 107, 129, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--primary-pink);
+  animation: floatUp 3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  white-space: nowrap;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 20px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  80% {
+    opacity: 1;
+    transform: translate(-50%, -100px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -140px) scale(0.9);
+  }
+}
+
+/* 画笔工具栏 */
+.tools-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  margin-top: 6px;
+  gap: 8px;
+  box-shadow: var(--shadow-sm);
+  transition: opacity 0.2s ease;
+}
+
+.tools-bar.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.color-palette {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px;
+}
+
+.color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #FFF;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.color-dot.active {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 2px var(--primary-pink);
+}
+
+.action-tools {
+  display: flex;
+  gap: 6px;
+}
+
+.tool-btn {
+  border: 1px solid var(--border-color);
+  background: #F8F9FA;
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.15s ease;
+}
+
+.tool-btn.active {
+  background: var(--soft-pink);
+  border-color: var(--primary-pink);
+  color: var(--primary-pink);
+}
+
+/* 底部互动与猜词区域 */
+.interaction-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* 快捷反应按钮横向滚动栏 */
+.quick-reactions {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.quick-reactions::-webkit-scrollbar {
+  display: none;
+}
+
+.reaction-btn {
+  background: #FFF;
+  border: 1px solid var(--border-color);
+  padding: 5px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.1s ease;
+}
+
+.reaction-btn:active {
+  transform: scale(0.94);
+  background: var(--soft-pink);
+}
+
+/* 猜词记录与输入条 */
+.chat-guess-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chat-bubble-stream {
+  height: 52px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 6px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(232, 226, 217, 0.6);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.chat-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+  margin: auto;
+}
+
+.chat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.chat-item .sender {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.chat-item .message {
+  font-size: 13px;
+  font-weight: 500;
+  background: #FFF;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.guess-form {
+  display: flex;
+  gap: 8px;
+}
+
+.guess-input {
+  flex: 1;
+  background: #FFF;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.guess-input:focus {
+  border-color: var(--primary-pink);
+}
+
+.send-btn {
+  background: var(--primary-pink);
+  color: #FFF;
+  border: none;
+  padding: 0 20px;
+  border-radius: var(--radius-md);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.send-btn:active {
+  transform: scale(0.96);
+  background: var(--primary-pink-hover);
+}
+
+/* 弹窗通用样式 */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal-card {
+  background: #FFF;
+  width: 100%;
+  max-width: 360px;
+  border-radius: var(--radius-lg);
+  padding: 24px 20px;
+  box-shadow: 0 16px 36px rgba(0,0,0,0.15);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.modal-card h3 {
+  font-size: 18px;
+  color: var(--text-main);
+}
+
+.modal-card p {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  outline: none;
+}
+
+.modal-input:focus {
+  border-color: var(--primary-pink);
+}
+
+.primary-btn {
+  background: var(--primary-pink);
+  color: #FFF;
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-actions button {
+  flex: 1;
+}
+
+.cancel-btn {
+  background: #F1F2F6;
+  border: none;
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+/* 拍立得画作回忆卡弹窗特化 */
+.polaroid-card {
+  max-width: 380px;
+  background: #FFFAF5;
+  border: 2px solid #F5E6D3;
+}
+
+.polaroid-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.polaroid-header h4 {
+  font-size: 17px;
+  color: #E84118;
+}
+
+.polaroid-img-wrapper {
+  background: #FFF;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  border: 1px solid #ECE2D5;
+}
+
+.polaroid-img-wrapper img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+.polaroid-tip {
+  font-size: 12px;
+  color: var(--primary-pink);
+  font-weight: 500;
+}
+
+.next-round-countdown {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.next-round-countdown span {
+  color: var(--primary-pink);
+  font-weight: bold;
+}

@@ -1,0 +1,23 @@
+{
+  "name": "couple-draw-and-guess",
+  "version": "1.0.0",
+  "description": "专为情侣设计的 1v1 单线手机/平板你画我猜网页游戏",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "draw-and-guess",
+    "socket.io",
+    "canvas",
+    "couple-game",
+    "mobile-web"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
