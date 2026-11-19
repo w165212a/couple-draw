@@ -8,7 +8,7 @@
 </head>
 <body>
   <div id="app" class="app-container">
-    <!-- 顶部状态栏 -->
+    <!-- 顶部导航与状态栏 -->
     <header class="header">
       <div class="room-pill" id="roomBtn" title="点击复制分享链接">
         <span class="room-icon">🔗</span>
@@ -17,7 +17,7 @@
 
       <div class="status-indicator" id="statusIndicator">
         <span class="dot"></span>
-        <span id="statusText">正在连接...</span>
+        <span id="statusText">等待连接...</span>
       </div>
 
       <button class="icon-btn" id="addWordBtn" title="投喂属于你们的专属词">
@@ -25,15 +25,27 @@
       </button>
     </header>
 
-    <!-- 题目/角色提示横幅 -->
-    <section class="topic-banner" id="topicBanner">
-      <div class="topic-content">
-        <span class="role-badge" id="roleBadge">请稍候</span>
-        <span class="topic-word" id="topicWord">等待对方加入中...</span>
-        <span class="category-tag" id="categoryTag">恋爱小世界</span>
+    <!-- 玩家列表栏 (显示房间内所有玩家、头像、角色与准备状态) -->
+    <section class="player-list-bar" id="playerListBar">
+      <div class="players-chips-container" id="playersChipsContainer">
+        <!-- 动态生成玩家卡片 -->
       </div>
-      <div class="timer-box" id="timerBox">
-        <span id="timerText">--</span>s
+      <button class="ready-action-btn" id="readyActionBtn">❤️ 我准备好了</button>
+    </section>
+
+    <!-- 题目/角色横幅 (优化两行布局，保证长词绝对不截断) -->
+    <section class="topic-banner" id="topicBanner">
+      <div class="banner-top-row">
+        <div class="badge-group">
+          <span class="role-badge" id="roleBadge">等待准备</span>
+          <span class="category-tag" id="categoryTag">恋爱专属</span>
+        </div>
+        <div class="timer-box" id="timerBox">
+          <span id="timerText">--</span>s
+        </div>
+      </div>
+      <div class="banner-bottom-row">
+        <span class="topic-word" id="topicWord">点击下方【准备】开启甜蜜对局</span>
       </div>
     </section>
 
@@ -96,17 +108,66 @@
       </div>
     </footer>
 
-    <!-- 名字录入弹窗 (首次进入) -->
+    <!-- 1. 登录与选头像弹窗 -->
     <div class="modal-overlay" id="nameModal">
       <div class="modal-card">
-        <h3>💕 欢迎进入专属小游戏</h3>
-        <p>你希望对方怎么称呼你呢？</p>
+        <h3>💕 欢迎进入专属小世界</h3>
+        <p class="modal-sub">第一步：挑选一个可爱的专属头像</p>
+        
+        <!-- 头像挑选网格 -->
+        <div class="avatar-grid" id="avatarGrid">
+          <button class="avatar-btn active" data-avatar="🐱">🐱</button>
+          <button class="avatar-btn" data-avatar="🐶">🐶</button>
+          <button class="avatar-btn" data-avatar="🐰">🐰</button>
+          <button class="avatar-btn" data-avatar="🐻">🐻</button>
+          <button class="avatar-btn" data-avatar="🐼">🐼</button>
+          <button class="avatar-btn" data-avatar="🦊">🦊</button>
+          <button class="avatar-btn" data-avatar="🐨">🐨</button>
+          <button class="avatar-btn" data-avatar="🐷">🐷</button>
+          <button class="avatar-btn" data-avatar="🐥">🐥</button>
+          <button class="avatar-btn" data-avatar="🦄">🦄</button>
+          <button class="avatar-btn" data-avatar="🐸">🐸</button>
+          <button class="avatar-btn" data-avatar="🐯">🐯</button>
+        </div>
+
+        <p class="modal-sub">第二步：输入你的专属昵称</p>
         <input type="text" id="nameInput" class="modal-input" placeholder="例如：大聪明 / 仙女宝贝" maxlength="10">
-        <button class="primary-btn" id="confirmNameBtn">进入小世界</button>
+        <button class="primary-btn" id="confirmNameBtn">确认进入游戏</button>
       </div>
     </div>
 
-    <!-- 投喂专属新词弹窗 -->
+    <!-- 2. 开局画手自主选词弹窗 (4选1 + 换一批) -->
+    <div class="modal-overlay" id="wordSelectModal" style="display: none;">
+      <div class="modal-card select-word-card">
+        <div class="modal-header-with-timer">
+          <span class="modal-title">🎨 请挑选你要画的题目</span>
+          <span class="select-timer-badge" id="selectTimerBadge">⏱️ 15s</span>
+        </div>
+        <p class="select-hint">点击以下卡片直接选定（超时将自动选择第 1 个）：</p>
+
+        <!-- 4 选 1 候选词网格 -->
+        <div class="candidate-words-grid" id="candidateWordsGrid">
+          <!-- 动态生成 4 张卡片 -->
+        </div>
+
+        <!-- 换一批按钮 -->
+        <button class="refresh-words-btn" id="refreshWordsBtn">
+          🔄 都不满意？换一批新词 (再来4个)
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. 猜题人等待画手选词弹窗 -->
+    <div class="modal-overlay" id="guesserWaitingModal" style="display: none;">
+      <div class="modal-card">
+        <div class="waiting-avatar" id="waitingDrawerAvatar">🎨</div>
+        <h3 id="waitingDrawerTitle">画手正在选词中...</h3>
+        <p class="modal-sub">请准备好你的火眼金睛，马上开画！</p>
+        <div class="select-timer-badge" id="guesserWaitTimer">⏱️ 15s</div>
+      </div>
+    </div>
+
+    <!-- 4. 投喂专属新词弹窗 -->
     <div class="modal-overlay" id="wordModal" style="display: none;">
       <div class="modal-card">
         <h3>💌 投喂属于你们的专属回忆</h3>
@@ -119,7 +180,7 @@
       </div>
     </div>
 
-    <!-- 猜中胜利：拍立得画作回忆卡弹窗 -->
+    <!-- 5. 猜中胜利：拍立得画作回忆卡弹窗 -->
     <div class="modal-overlay" id="victoryModal" style="display: none;">
       <div class="modal-card polaroid-card">
         <div class="polaroid-header">
@@ -134,7 +195,7 @@
         <p class="polaroid-tip">📱 手机端长按上方图片即可保存到相册</p>
         
         <div class="next-round-countdown" id="nextRoundTimer">
-          下一局将在 <span>7</span> 秒后自动开始...
+          下一局将在 <span>7</span> 秒后进入准备...
         </div>
       </div>
     </div>

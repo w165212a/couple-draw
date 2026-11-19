@@ -26,7 +26,7 @@ function loadWords() {
     console.error('加载词库失败，使用备用词库:', err);
     wordBank = {
       categories: [
-        { name: "甜蜜日常", words: ["第一次看电影", "偷喝奶茶", "压马路", "拍合照", "赖床"] }
+        { name: "甜蜜日常", words: ["第一次看电影", "偷喝奶茶", "压马路", "拍合照", "赖床", "摩天轮接吻", "撑一把伞"] }
       ],
       customWords: []
     };
@@ -53,8 +53,8 @@ function addCustomWord(word) {
   return false;
 }
 
-// 随机获取一个词
-function getRandomWord() {
+// 获取全部词汇池
+function getAllWordsPool() {
   const allPool = [];
   if (wordBank.categories) {
     wordBank.categories.forEach(cat => {
@@ -65,26 +65,73 @@ function getRandomWord() {
     wordBank.customWords.forEach(w => allPool.push({ word: w, category: "我们的专属回忆" }));
   }
   if (allPool.length === 0) {
-    return { word: "心有灵犀", category: "甜蜜默契" };
+    allPool.push({ word: "心有灵犀", category: "甜蜜默契" });
   }
-  const idx = Math.floor(Math.random() * allPool.length);
-  return allPool[idx];
+  return allPool;
+}
+
+// 获取 N 个互不相同的候选词（自主选词功能）
+function getCandidateWords(count = 4, excludeWords = []) {
+  const pool = getAllWordsPool();
+  // 尽量排除上一组词
+  const filtered = pool.filter(item => !excludeWords.includes(item.word));
+  const candidatePool = filtered.length >= count ? filtered : pool;
+
+  // 洗牌算法随机挑选 count 个
+  const shuffled = [...candidatePool].sort(() => 0.5 - Math.random());
+  const selected = [];
+  const pickedWords = new Set();
+
+  for (const item of shuffled) {
+    if (!pickedWords.has(item.word)) {
+      pickedWords.add(item.word);
+      selected.push(item);
+    }
+    if (selected.length >= count) break;
+  }
+
+  // 若不足则用备用词补足
+  while (selected.length < count) {
+    selected.push({ word: "甜蜜约会", category: "甜蜜日常" });
+  }
+
+  return selected;
 }
 
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
 
 // 房间状态数据
-// rooms[roomId] = { players: [], currentDrawerIndex: 0, currentWord: '', ... }
 const rooms = {};
+
+// 广播房间人员与状态信息
+function broadcastRoomInfo(roomId) {
+  const room = rooms[roomId];
+  if (!room) return;
+
+  io.to(roomId).emit('room_info', {
+    players: room.players.map((p, idx) => ({
+      name: p.name,
+      avatar: p.avatar || '🐱',
+      isReady: !!p.isReady,
+      score: p.score || 0,
+      isDrawer: room.state !== 'lobby' && idx === room.currentDrawerIndex
+    })),
+    playerCount: room.players.length,
+    state: room.state,
+    currentDrawerIndex: room.currentDrawerIndex
+  });
+}
 
 io.on('connection', (socket) => {
   let userRoom = null;
   let userName = null;
+  let userAvatar = null;
 
-  socket.on('join_room', ({ room, name }) => {
+  socket.on('join_room', ({ room, name, avatar }) => {
     userRoom = (room || 'sweet520').trim();
     userName = (name || '神秘宝贝').trim();
+    userAvatar = avatar || '🐱';
 
     socket.join(userRoom);
 
@@ -95,9 +142,12 @@ io.on('connection', (socket) => {
         currentDrawerIndex: 0,
         currentWord: '',
         category: '',
-        state: 'waiting', // 'waiting' | 'playing' | 'round_end'
+        candidateWords: [],
+        state: 'lobby', // 'lobby' | 'selecting_word' | 'playing' | 'round_end'
         timerSeconds: 90,
         timerInterval: null,
+        wordPickSeconds: 15,
+        wordPickInterval: null,
         roundStartTime: 0,
         drawHistory: []
       };
@@ -109,29 +159,29 @@ io.on('connection', (socket) => {
     const existingIndex = currentRoom.players.findIndex(p => p.name === userName);
     if (existingIndex !== -1) {
       currentRoom.players[existingIndex].socketId = socket.id;
+      currentRoom.players[existingIndex].avatar = userAvatar;
     } else {
+      const newPlayer = {
+        socketId: socket.id,
+        name: userName,
+        avatar: userAvatar,
+        isReady: false,
+        score: 0
+      };
       if (currentRoom.players.length >= 2) {
-        // 允许替换断开连接的空槽，或者按候补加入
-        currentRoom.players[1] = { socketId: socket.id, name: userName, score: 0 };
+        currentRoom.players[1] = newPlayer;
       } else {
-        currentRoom.players.push({ socketId: socket.id, name: userName, score: 0 });
+        currentRoom.players.push(newPlayer);
       }
     }
 
-    console.log(`[${userRoom}] 玩家加入: ${userName}，当前人数: ${currentRoom.players.length}`);
+    console.log(`[${userRoom}] 玩家加入: ${userAvatar} ${userName}，当前人数: ${currentRoom.players.length}`);
 
-    // 通知房间内当前玩家信息
-    io.to(userRoom).emit('room_info', {
-      players: currentRoom.players.map(p => ({ name: p.name })),
-      playerCount: currentRoom.players.length,
-      state: currentRoom.state
-    });
+    // 通知房间信息
+    broadcastRoomInfo(userRoom);
 
-    // 如果正好满 2 人且处于等待中，开启第一轮！
-    if (currentRoom.players.length === 2 && currentRoom.state === 'waiting') {
-      startRound(userRoom);
-    } else if (currentRoom.state === 'playing') {
-      // 若中途重连，补发当前绘画记录
+    // 如果中途重连且正在画画，补发画板与回合状态
+    if (currentRoom.state === 'playing') {
       socket.emit('sync_canvas', currentRoom.drawHistory);
       const isDrawer = currentRoom.players[currentRoom.currentDrawerIndex]?.socketId === socket.id;
       socket.emit('rejoin_round', {
@@ -145,14 +195,114 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 开始新一轮
-  function startRound(roomId) {
+  // 玩家准备 / 取消准备
+  socket.on('toggle_ready', () => {
+    if (!userRoom || !rooms[userRoom]) return;
+    const room = rooms[userRoom];
+    if (room.state !== 'lobby' && room.state !== 'round_end') return;
+
+    const player = room.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    player.isReady = !player.isReady;
+    console.log(`[${userRoom}] 玩家 ${player.name} 状态变更为: ${player.isReady ? '已准备' : '取消准备'}`);
+    broadcastRoomInfo(userRoom);
+
+    // 检查是否 2 人且均已准备好
+    if (room.players.length >= 2 && room.players.every(p => p.isReady)) {
+      console.log(`[${userRoom}] 双方均已准备就绪，进入自主选词阶段！`);
+      startWordSelectionPhase(userRoom);
+    }
+  });
+
+  // 开始自主选词阶段 (4 选 1)
+  function startWordSelectionPhase(roomId) {
     const room = rooms[roomId];
     if (!room || room.players.length < 2) return;
 
     if (room.timerInterval) clearInterval(room.timerInterval);
+    if (room.wordPickInterval) clearInterval(room.wordPickInterval);
 
-    const { word, category } = getRandomWord();
+    room.state = 'selecting_word';
+    room.candidateWords = getCandidateWords(4);
+    room.wordPickSeconds = 15;
+
+    const drawer = room.players[room.currentDrawerIndex];
+    const guesser = room.players[1 - room.currentDrawerIndex];
+
+    console.log(`[${roomId}] 画手 ${drawer.name} 正在挑选词汇，备选:`, room.candidateWords.map(c => c.word));
+
+    // 通知画手自主选词（4选1）
+    io.to(drawer.socketId).emit('pick_word_turn', {
+      candidates: room.candidateWords,
+      duration: room.wordPickSeconds
+    });
+
+    // 通知猜题人等待
+    io.to(guesser.socketId).emit('guesser_waiting_pick', {
+      drawerName: drawer.name,
+      drawerAvatar: drawer.avatar,
+      duration: room.wordPickSeconds
+    });
+
+    broadcastRoomInfo(roomId);
+
+    // 开启 15 秒选词倒计时
+    room.wordPickInterval = setInterval(() => {
+      room.wordPickSeconds--;
+      io.to(roomId).emit('word_pick_tick', { seconds: room.wordPickSeconds });
+
+      if (room.wordPickSeconds <= 0) {
+        clearInterval(room.wordPickInterval);
+        // 超时未选则默认选中第 1 个词
+        const defaultChoice = room.candidateWords[0];
+        console.log(`[${roomId}] 选词超时，自动选定: 【${defaultChoice.word}】`);
+        startDrawingPhase(roomId, defaultChoice.word, defaultChoice.category);
+      }
+    }, 1000);
+  }
+
+  // 画手请求换一批词（刷新 4 个词）
+  socket.on('refresh_candidates', () => {
+    if (!userRoom || !rooms[userRoom]) return;
+    const room = rooms[userRoom];
+    if (room.state !== 'selecting_word') return;
+
+    const drawer = room.players[room.currentDrawerIndex];
+    if (!drawer || drawer.socketId !== socket.id) return;
+
+    const oldWords = room.candidateWords.map(c => c.word);
+    room.candidateWords = getCandidateWords(4, oldWords);
+
+    console.log(`[${userRoom}] 画手 ${drawer.name} 刷新了词汇，新候选:`, room.candidateWords.map(c => c.word));
+
+    // 重新发给画手
+    socket.emit('pick_word_turn', {
+      candidates: room.candidateWords,
+      duration: room.wordPickSeconds
+    });
+  });
+
+  // 画手确认选中某个词
+  socket.on('choose_word', ({ word, category }) => {
+    if (!userRoom || !rooms[userRoom]) return;
+    const room = rooms[userRoom];
+    if (room.state !== 'selecting_word') return;
+
+    const drawer = room.players[room.currentDrawerIndex];
+    if (!drawer || drawer.socketId !== socket.id) return;
+
+    if (room.wordPickInterval) clearInterval(room.wordPickInterval);
+
+    console.log(`[${userRoom}] 画手 ${drawer.name} 选定题目: 【${word}】(${category})`);
+    startDrawingPhase(userRoom, word, category);
+  });
+
+  // 正式进入作画与猜题阶段
+  function startDrawingPhase(roomId, word, category) {
+    const room = rooms[roomId];
+    if (!room || room.players.length < 2) return;
+
     room.currentWord = word;
     room.category = category;
     room.state = 'playing';
@@ -163,15 +313,15 @@ io.on('connection', (socket) => {
     const drawer = room.players[room.currentDrawerIndex];
     const guesser = room.players[1 - room.currentDrawerIndex];
 
-    console.log(`[${roomId}] 新回合: 画手=${drawer.name}, 题目=${word}(${category})`);
-
     // 通知画手
     io.to(drawer.socketId).emit('round_start', {
       isDrawer: true,
       word: room.currentWord,
       category: room.category,
       drawerName: drawer.name,
-      guesserName: guesser.name
+      drawerAvatar: drawer.avatar,
+      guesserName: guesser.name,
+      guesserAvatar: guesser.avatar
     });
 
     // 通知猜题人
@@ -180,10 +330,14 @@ io.on('connection', (socket) => {
       wordLength: room.currentWord.length,
       category: room.category,
       drawerName: drawer.name,
-      guesserName: guesser.name
+      drawerAvatar: drawer.avatar,
+      guesserName: guesser.name,
+      guesserAvatar: guesser.avatar
     });
 
-    // 开启倒计时
+    broadcastRoomInfo(roomId);
+
+    // 开启作画 90 秒倒计时
     room.timerInterval = setInterval(() => {
       room.timerSeconds--;
       io.to(roomId).emit('timer_tick', { seconds: room.timerSeconds });
@@ -197,11 +351,16 @@ io.on('connection', (socket) => {
           drawerName: drawer.name
         });
 
-        // 角色互换，5秒后开始下一轮
+        // 倒计时结束重置准备状态，角色互换
         room.currentDrawerIndex = 1 - room.currentDrawerIndex;
+        room.players.forEach(p => p.isReady = false);
+        broadcastRoomInfo(roomId);
+
+        // 5秒后恢复大厅等待状态
         setTimeout(() => {
-          if (rooms[roomId] && rooms[roomId].players.length >= 2) {
-            startRound(roomId);
+          if (rooms[roomId]) {
+            rooms[roomId].state = 'lobby';
+            broadcastRoomInfo(roomId);
           }
         }, 5000);
       }
@@ -217,14 +376,12 @@ io.on('connection', (socket) => {
     const currentDrawer = room.players[room.currentDrawerIndex];
     if (!currentDrawer || currentDrawer.socketId !== socket.id) return;
 
-    // 记录历史
     if (data.type === 'clear') {
       room.drawHistory = [];
     } else {
       room.drawHistory.push(data);
     }
 
-    // 广播给房间内另一位
     socket.to(userRoom).emit('draw_action', data);
   });
 
@@ -238,7 +395,6 @@ io.on('connection', (socket) => {
     const currentGuesser = room.players[1 - room.currentDrawerIndex];
     const currentDrawer = room.players[room.currentDrawerIndex];
 
-    // 只有猜题人猜中才算
     const isGuesser = currentGuesser && currentGuesser.socketId === socket.id;
 
     if (isGuesser && guessText.toLowerCase() === room.currentWord.toLowerCase()) {
@@ -247,29 +403,39 @@ io.on('connection', (socket) => {
       room.state = 'round_end';
       const elapsedSeconds = Math.max(1, Math.floor((Date.now() - room.roundStartTime) / 1000));
 
-      console.log(`[${userRoom}] 猜中了！${userName} 猜中词语【${room.currentWord}】，耗时 ${elapsedSeconds}s`);
+      // 双方增加得分
+      currentGuesser.score = (currentGuesser.score || 0) + 3;
+      currentDrawer.score = (currentDrawer.score || 0) + 2;
+
+      console.log(`[${userRoom}] 猜中！${userName} 猜中【${room.currentWord}】，耗时 ${elapsedSeconds}s`);
 
       io.to(userRoom).emit('round_win', {
         word: room.currentWord,
         category: room.category,
         drawerName: currentDrawer.name,
+        drawerAvatar: currentDrawer.avatar,
         guesserName: currentGuesser.name,
+        guesserAvatar: currentGuesser.avatar,
         elapsedSeconds
       });
 
-      // 角色互换
+      // 角色互换，重置准备状态
       room.currentDrawerIndex = 1 - room.currentDrawerIndex;
+      room.players.forEach(p => p.isReady = false);
+      broadcastRoomInfo(userRoom);
 
-      // 7 秒后自动开启下一回合（留足时间欣赏和保存回忆卡）
+      // 7 秒后恢复大厅准备状态
       setTimeout(() => {
-        if (rooms[userRoom] && rooms[userRoom].players.length >= 2) {
-          startRound(userRoom);
+        if (rooms[userRoom]) {
+          rooms[userRoom].state = 'lobby';
+          broadcastRoomInfo(userRoom);
         }
       }, 7000);
     } else {
-      // 没猜中，作为普通猜题弹幕/聊天展示给双方
+      // 没猜中，作为普通弹幕/聊天展示给双方
       io.to(userRoom).emit('chat_message', {
         sender: userName,
+        avatar: userAvatar,
         text: guessText,
         isGuesser
       });
@@ -281,6 +447,7 @@ io.on('connection', (socket) => {
     if (!userRoom) return;
     io.to(userRoom).emit('reaction_popup', {
       sender: userName,
+      avatar: userAvatar,
       emoji: emoji || '❤️',
       text: text || ''
     });
@@ -305,16 +472,11 @@ io.on('connection', (socket) => {
       const room = rooms[userRoom];
       room.players = room.players.filter(p => p.socketId !== socket.id);
       
-      io.to(userRoom).emit('room_info', {
-        players: room.players.map(p => ({ name: p.name })),
-        playerCount: room.players.length,
-        state: 'waiting'
-      });
+      if (room.timerInterval) clearInterval(room.timerInterval);
+      if (room.wordPickInterval) clearInterval(room.wordPickInterval);
+      room.state = 'lobby';
 
-      if (room.players.length < 2) {
-        if (room.timerInterval) clearInterval(room.timerInterval);
-        room.state = 'waiting';
-      }
+      broadcastRoomInfo(userRoom);
 
       if (room.players.length === 0) {
         delete rooms[userRoom];
@@ -327,6 +489,5 @@ server.listen(PORT, () => {
   console.log(`===============================================`);
   console.log(`💕 情侣你画我猜服务已启动!`);
   console.log(`🌐 本地访问地址: http://localhost:${PORT}`);
-  console.log(`📱 手机/平板测试: http://<你的电脑局域网IP>:${PORT}`);
   console.log(`===============================================`);
 });
