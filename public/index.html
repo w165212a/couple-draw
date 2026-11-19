@@ -8,7 +8,7 @@
 </head>
 <body>
   <div id="app" class="app-container">
-    <!-- 顶部导航与状态栏 -->
+    <!-- 顶部状态栏 -->
     <header class="header">
       <div class="room-pill" id="roomBtn" title="点击复制分享链接">
         <span class="room-icon">🔗</span>
@@ -25,27 +25,35 @@
       </button>
     </header>
 
-    <!-- 玩家列表栏 (显示房间内所有玩家、头像、角色与准备状态) -->
+    <!-- 玩家列表栏 (房间人员、头像、分数，并在开局后自动隐藏准备按钮) -->
     <section class="player-list-bar" id="playerListBar">
       <div class="players-chips-container" id="playersChipsContainer">
         <!-- 动态生成玩家卡片 -->
       </div>
+      <!-- 仅在开局前显示的准备按钮，一旦开局自动隐藏 -->
       <button class="ready-action-btn" id="readyActionBtn">❤️ 我准备好了</button>
     </section>
 
-    <!-- 题目/角色横幅 (优化两行布局，保证长词绝对不截断) -->
+    <!-- 题目与进阶提示横幅 -->
     <section class="topic-banner" id="topicBanner">
+      <!-- 第一行：角色徽章 + 倒计时 -->
       <div class="banner-top-row">
         <div class="badge-group">
           <span class="role-badge" id="roleBadge">等待准备</span>
-          <span class="category-tag" id="categoryTag">恋爱专属</span>
         </div>
         <div class="timer-box" id="timerBox">
           <span id="timerText">--</span>s
         </div>
       </div>
+
+      <!-- 第二行：题目内容（全宽自适应，绝对不截断） -->
       <div class="banner-bottom-row">
-        <span class="topic-word" id="topicWord">点击下方【准备】开启甜蜜对局</span>
+        <span class="topic-word" id="topicWord">首次进房双方点击【准备】，即可全自动畅玩！</span>
+      </div>
+
+      <!-- 第三行：进阶提示区域 (Req 2: 一定时间没猜到给第一个提示，再没猜到给后一个) -->
+      <div class="hint-container" id="hintContainer" style="display: none;">
+        <span class="hint-placeholder" id="hintPlaceholder">💡 进阶提示：开局30秒后解锁线索①...</span>
       </div>
     </section>
 
@@ -136,14 +144,14 @@
       </div>
     </div>
 
-    <!-- 2. 开局画手自主选词弹窗 (4选1 + 换一批) -->
+    <!-- 2. 开局画手自主选词弹窗 (4选1 + 换一批 + 提示预览) -->
     <div class="modal-overlay" id="wordSelectModal" style="display: none;">
       <div class="modal-card select-word-card">
         <div class="modal-header-with-timer">
           <span class="modal-title">🎨 请挑选你要画的题目</span>
           <span class="select-timer-badge" id="selectTimerBadge">⏱️ 15s</span>
         </div>
-        <p class="select-hint">点击以下卡片直接选定（超时将自动选择第 1 个）：</p>
+        <p class="select-hint">点击卡片选定（下方附带对方会收到的进阶提示）：</p>
 
         <!-- 4 选 1 候选词网格 -->
         <div class="candidate-words-grid" id="candidateWordsGrid">
@@ -172,7 +180,7 @@
       <div class="modal-card">
         <h3>💌 投喂属于你们的专属回忆</h3>
         <p>输入只有你们懂的梗、去过的地方或美食：</p>
-        <input type="text" id="newWordInput" class="modal-input" placeholder="例如：第一次喝的奶茶 / 踩我脚" maxlength="16">
+        <input type="text" id="newWordInput" class="modal-input" placeholder="例如：第一次喝的奶茶" maxlength="16">
         <div class="modal-actions">
           <button class="cancel-btn" id="closeWordModalBtn">取消</button>
           <button class="primary-btn" id="submitWordBtn">悄悄存入词库</button>
@@ -195,14 +203,13 @@
         <p class="polaroid-tip">📱 手机端长按上方图片即可保存到相册</p>
         
         <div class="next-round-countdown" id="nextRoundTimer">
-          下一局将在 <span>7</span> 秒后进入准备...
+          下一局将在 <span>6</span> 秒后自动开始...
         </div>
       </div>
     </div>
 
   </div>
 
-  <!-- 引入 Socket.io 客户端脚本 -->
   <script src="/socket.io/socket.io.js"></script>
   <script src="js/app.js"></script>
 </body>

@@ -113,7 +113,7 @@ html, body {
   background: #FFE3E7;
 }
 
-/* 玩家列表与准备控制栏 (Req 3 & Req 4) */
+/* 玩家列表栏 */
 .player-list-bar {
   display: flex;
   align-items: center;
@@ -122,7 +122,7 @@ html, body {
   background: #FFF;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 6px 10px;
+  padding: 5px 10px;
   margin-top: 4px;
   box-shadow: var(--shadow-sm);
   flex-shrink: 0;
@@ -191,11 +191,12 @@ html, body {
   font-weight: bold;
 }
 
+/* 准备按钮：开局后自动隐藏 */
 .ready-action-btn {
   background: var(--primary-pink);
   color: #FFF;
   border: none;
-  padding: 6px 12px;
+  padding: 5px 12px;
   border-radius: 14px;
   font-size: 12px;
   font-weight: bold;
@@ -214,7 +215,7 @@ html, body {
   box-shadow: 0 2px 6px rgba(46, 213, 115, 0.3);
 }
 
-/* 题目/角色横幅：2行布局优化 (Req 1: 解决长词截断) */
+/* 题目与进阶提示横幅 */
 .topic-banner {
   display: flex;
   flex-direction: column;
@@ -250,20 +251,12 @@ html, body {
   border-radius: 6px;
 }
 
-.category-tag {
-  font-size: 11px;
-  background: #F1F2F6;
-  color: var(--text-muted);
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
 .timer-box {
   font-size: 14px;
   font-weight: 700;
   color: var(--primary-pink);
   background: var(--soft-pink);
-  padding: 3px 8px;
+  padding: 2px 8px;
   border-radius: 10px;
 }
 
@@ -273,7 +266,6 @@ html, body {
   width: 100%;
 }
 
-/* 题目文字全宽显示，支持自然换行，永不截断 */
 .topic-word {
   font-size: 17px;
   font-weight: 700;
@@ -281,6 +273,52 @@ html, body {
   line-height: 1.3;
   word-break: break-all;
   white-space: normal;
+}
+
+/* 进阶提示栏 (Req 2) */
+.hint-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 4px;
+  border-top: 1px dashed #F0E6D8;
+  margin-top: 2px;
+}
+
+.hint-placeholder {
+  font-size: 11px;
+  color: #A4B0BE;
+  display: flex;
+  align-items: center;
+}
+
+.hint-badge {
+  font-size: 11px;
+  font-weight: bold;
+  padding: 2px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: popIn 0.3s ease;
+}
+
+.hint-badge.level-1 {
+  background: #FFF3CD;
+  color: #856404;
+  border: 1px solid #FFEEBA;
+}
+
+.hint-badge.level-2 {
+  background: #E8F4FD;
+  color: #0C5460;
+  border: 1px solid #BEE5EB;
+}
+
+.hint-next-tip {
+  font-size: 10px;
+  color: #FF9F43;
 }
 
 /* 主画板区域 */
@@ -597,7 +635,7 @@ html, body {
   color: var(--text-muted);
 }
 
-/* 头像挑选网格 (Req 2) */
+/* 头像挑选网格 */
 .avatar-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
@@ -669,9 +707,9 @@ html, body {
   cursor: pointer;
 }
 
-/* 自主选词弹窗 (Req 5: 4选1 + 换一批) */
+/* 自主选词弹窗 (4选1 + 换一批 + 提示预览) */
 .select-word-card {
-  max-width: 380px;
+  max-width: 400px;
   padding: 18px 14px;
 }
 
@@ -713,12 +751,12 @@ html, body {
   background: #FFFDF9;
   border: 1.5px solid #F0E5D8;
   border-radius: var(--radius-md);
-  padding: 12px 8px;
+  padding: 10px 8px;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.15s ease;
 }
@@ -729,21 +767,19 @@ html, body {
   background: #FFF5F7;
 }
 
-.candidate-card .card-cat {
-  font-size: 10px;
-  color: var(--primary-pink);
-  background: var(--soft-pink);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
 .candidate-card .card-word {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-main);
   text-align: center;
   line-height: 1.25;
+}
+
+.candidate-card .card-hint-preview {
+  font-size: 10px;
+  color: #8A95A5;
+  text-align: center;
+  line-height: 1.3;
 }
 
 .refresh-words-btn {

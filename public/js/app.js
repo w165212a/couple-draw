@@ -15,8 +15,8 @@ const readyActionBtn = document.getElementById('readyActionBtn');
 // 题目与横幅
 const roleBadge = document.getElementById('roleBadge');
 const topicWord = document.getElementById('topicWord');
-const categoryTag = document.getElementById('categoryTag');
 const timerText = document.getElementById('timerText');
+const hintContainer = document.getElementById('hintContainer');
 
 // 画板与工具
 const canvasContainer = document.getElementById('canvasContainer');
@@ -72,9 +72,11 @@ let roomName = 'sweet520';
 let playerName = '';
 let selectedAvatar = '🐱';
 let isMyReady = false;
+let isGameActive = false;
 
 let currentWord = '';
-let currentCategory = '';
+let currentHint1 = '';
+let currentHint2 = '';
 let countdownInterval = null;
 let drawHistory = [];
 
@@ -107,7 +109,6 @@ function initPlayerAndRoom() {
   }
 }
 
-// 头像选择交互
 function setupAvatarGridUI() {
   const avatarButtons = avatarGrid.querySelectorAll('.avatar-btn');
   avatarButtons.forEach(btn => {
@@ -152,23 +153,23 @@ roomBtn.addEventListener('click', () => {
   });
 });
 
-// 2. 准备 / 取消准备交互
+// 2. 准备 / 取消准备交互 (首次进房点击)
 readyActionBtn.addEventListener('click', () => {
   socket.emit('toggle_ready');
 });
 
-// 3. 画手自主选词 (Req 5: 4选1 + 换一批)
+// 3. 画手自主选词 (4选1 + 换一批 + 提示预览)
 function renderCandidateWords(candidates) {
   candidateWordsGrid.innerHTML = '';
   candidates.forEach(c => {
     const card = document.createElement('div');
     card.className = 'candidate-card';
     card.innerHTML = `
-      <span class="card-cat">${escapeHtml(c.category)}</span>
       <span class="card-word">${escapeHtml(c.word)}</span>
+      <span class="card-hint-preview">① ${escapeHtml(c.hint1 || '常见事物')}<br>② ${escapeHtml(c.hint2 || '仔细想想')}</span>
     `;
     card.addEventListener('click', () => {
-      socket.emit('choose_word', { word: c.word, category: c.category });
+      socket.emit('choose_word', { word: c.word, hint1: c.hint1, hint2: c.hint2 });
       wordSelectModal.style.display = 'none';
     });
     candidateWordsGrid.appendChild(card);
@@ -378,7 +379,7 @@ submitWordBtn.addEventListener('click', () => {
 });
 
 // 6. 生成拍立得画作回忆卡
-function generatePolaroidMemoryCard(word, category, drawer, drawerAvatar, guesser, guesserAvatar, seconds) {
+function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, guesser, guesserAvatar, seconds) {
   const card = document.createElement('canvas');
   card.width = 640;
   card.height = 840;
@@ -403,15 +404,18 @@ function generatePolaroidMemoryCard(word, category, drawer, drawerAvatar, guesse
   // 画面内容
   c.drawImage(canvas, margin, margin, photoSize, photoSize);
 
-  // 标题
+  // 题目
   c.fillStyle = '#2D3436';
   c.font = 'bold 36px -apple-system, sans-serif';
   c.fillText(`“${word}”`, margin, photoSize + margin + 55);
 
+  // 提示信息回顾
   c.fillStyle = '#FF6B81';
-  c.font = 'bold 20px -apple-system, sans-serif';
-  c.fillText(`🏷️ ${category}`, margin, photoSize + margin + 95);
+  c.font = 'bold 18px -apple-system, sans-serif';
+  const hintSummary = hint1 ? `💡 线索：${hint1} · ${hint2 || ''}` : '💡 甜蜜默契考验';
+  c.fillText(hintSummary, margin, photoSize + margin + 95);
 
+  // 画手与心有灵犀信息
   c.fillStyle = '#636E72';
   c.font = '22px -apple-system, sans-serif';
   c.fillText(`🎨 画手: ${drawerAvatar} ${drawer}  |  💡 猜中: ${guesserAvatar} ${guesser}`, margin, photoSize + margin + 135);
@@ -431,19 +435,19 @@ function generatePolaroidMemoryCard(word, category, drawer, drawerAvatar, guesse
   c.strokeRect(0, 0, 160, 42);
   c.fillStyle = '#FF6B81';
   c.font = 'bold 16px -apple-system, sans-serif';
-  c.fillText('💕 恋爱画画纪念 💕', 10, 26);
+  c.fillText('💕 默契猜画印章 💕', 10, 26);
   c.restore();
 
   polaroidImage.src = card.toDataURL('image/png');
   victoryModal.style.display = 'flex';
 
-  let remaining = 7;
-  nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后进入准备...`;
+  let remaining = 6;
+  nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后自动开始...`;
   if (countdownInterval) clearInterval(countdownInterval);
   countdownInterval = setInterval(() => {
     remaining--;
     if (remaining > 0) {
-      nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后进入准备...`;
+      nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后自动开始...`;
     } else {
       clearInterval(countdownInterval);
       victoryModal.style.display = 'none';
@@ -453,8 +457,10 @@ function generatePolaroidMemoryCard(word, category, drawer, drawerAvatar, guesse
 
 // 7. Socket 监听服务
 
-// 房间人员与准备状态更新 (Req 3 & Req 4)
-socket.on('room_info', ({ players, playerCount, state }) => {
+// 房间人员与准备状态更新 (Req 1: 首次准备后自动隐藏按钮，后续全自动)
+socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
+  isGameActive = !!gameStarted;
+
   // 渲染玩家列表卡片
   playersChipsContainer.innerHTML = '';
   players.forEach(p => {
@@ -464,7 +470,7 @@ socket.on('room_info', ({ players, playerCount, state }) => {
       <span class="chip-avatar">${p.avatar}</span>
       <span class="chip-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</span>
       ${state !== 'lobby' ? `<span class="chip-role ${p.isDrawer ? 'drawer' : ''}">${p.isDrawer ? '🎨画手' : '🤔猜题'}</span>` : ''}
-      <span class="chip-ready ${p.isReady ? '' : 'unready'}">${p.isReady ? '✅已准备' : '⏳未准备'}</span>
+      ${!isGameActive ? `<span class="chip-ready ${p.isReady ? '' : 'unready'}">${p.isReady ? '✅已准备' : '⏳未准备'}</span>` : '<span class="chip-ready">🎮对战中</span>'}
       <span class="chip-score">🏆${p.score}</span>
     `;
     playersChipsContainer.appendChild(chip);
@@ -472,36 +478,43 @@ socket.on('room_info', ({ players, playerCount, state }) => {
     // 更新当前玩家的准备按钮状态
     if (p.name === playerName) {
       isMyReady = p.isReady;
-      if (isMyReady) {
-        readyActionBtn.innerText = '✅ 取消准备';
-        readyActionBtn.classList.add('is-ready');
-      } else {
-        readyActionBtn.innerText = '❤️ 我准备好了';
-        readyActionBtn.classList.remove('is-ready');
-      }
     }
   });
+
+  // 如果游戏已开始，彻底隐藏准备按钮！(Req 1)
+  if (isGameActive) {
+    readyActionBtn.style.display = 'none';
+  } else {
+    readyActionBtn.style.display = 'block';
+    if (isMyReady) {
+      readyActionBtn.innerText = '✅ 取消准备';
+      readyActionBtn.classList.add('is-ready');
+    } else {
+      readyActionBtn.innerText = '❤️ 我准备好了';
+      readyActionBtn.classList.remove('is-ready');
+    }
+  }
 
   if (playerCount < 2) {
     statusIndicator.classList.remove('connected');
     statusText.innerText = '等待宝贝连线...💕';
     roleBadge.innerText = '等待中';
     topicWord.innerText = '等待对方点击专属链接进房';
-    categoryTag.innerText = '1v1 专属房';
     timerText.innerText = '--';
+    hintContainer.style.display = 'none';
     readyActionBtn.disabled = true;
   } else {
     statusIndicator.classList.add('connected');
     statusText.innerText = '双人已连线';
     readyActionBtn.disabled = false;
 
-    if (state === 'lobby') {
-      topicWord.innerText = '双方点击【我准备好了】即可自主选词开战！';
+    if (state === 'lobby' && !isGameActive) {
+      topicWord.innerText = '点击右侧【我准备好了】即可开启全自动轮换！';
     }
   }
 });
 
-// 画手端进入自主选词阶段 (Req 5)
+// 画手端进入自主选词阶段 (4选1 + 换一批)
 socket.on('pick_word_turn', ({ candidates, duration }) => {
   guesserWaitingModal.style.display = 'none';
   wordSelectModal.style.display = 'flex';
@@ -509,7 +522,7 @@ socket.on('pick_word_turn', ({ candidates, duration }) => {
   renderCandidateWords(candidates);
 });
 
-// 猜题人等待画手选词 (Req 5)
+// 猜题人等待画手选词
 socket.on('guesser_waiting_pick', ({ drawerName, drawerAvatar, duration }) => {
   wordSelectModal.style.display = 'none';
   guesserWaitingModal.style.display = 'flex';
@@ -524,7 +537,7 @@ socket.on('word_pick_tick', ({ seconds }) => {
   guesserWaitTimer.innerText = `⏱️ ${seconds}s`;
 });
 
-// 正式回合开始（选词完毕，进入作画）
+// 正式回合开始
 socket.on('round_start', (data) => {
   wordSelectModal.style.display = 'none';
   guesserWaitingModal.style.display = 'none';
@@ -535,8 +548,11 @@ socket.on('round_start', (data) => {
   drawHistory = [];
   setupCanvas();
 
-  currentCategory = data.category;
-  categoryTag.innerText = data.category;
+  currentHint1 = data.hint1 || '';
+  currentHint2 = data.hint2 || '';
+
+  // 显示进阶提示栏
+  hintContainer.style.display = 'flex';
 
   if (isDrawer) {
     roleBadge.innerText = '我是画手';
@@ -547,6 +563,12 @@ socket.on('round_start', (data) => {
     guessInput.disabled = true;
     guessInput.placeholder = '你正在作画，等待对方猜词...';
     sendBtn.disabled = true;
+
+    // 画手直接能看到将要提供的进阶线索
+    hintContainer.innerHTML = `
+      <span class="hint-badge level-1">线索①：${escapeHtml(data.hint1 || '等待揭晓')}</span>
+      <span class="hint-badge level-2">线索②：${escapeHtml(data.hint2 || '等待揭晓')}</span>
+    `;
   } else {
     roleBadge.innerText = '我是猜题人';
     roleBadge.style.background = '#1E90FF';
@@ -557,10 +579,38 @@ socket.on('round_start', (data) => {
     guessInput.placeholder = '输入你猜的词汇，回车发送...';
     sendBtn.disabled = false;
     guessInput.focus();
+
+    // 猜题人提示栏初始状态
+    hintContainer.innerHTML = `<span class="hint-placeholder" id="hintPlaceholder">💡 进阶提示：开局30秒后解锁线索①...</span>`;
   }
 });
 
-// 倒计时跳动
+// 进阶提示触发 (Req 2)
+socket.on('progressive_hint', ({ level, hint, msg }) => {
+  if (level === 1) {
+    currentHint1 = hint;
+    if (!isDrawer) {
+      hintContainer.innerHTML = `
+        <span class="hint-badge level-1">💡 提示①：${escapeHtml(hint)}</span>
+        <span class="hint-next-tip">(30s后解锁线索②)</span>
+      `;
+    }
+    showToast(`💡 进阶提示①揭晓：【${hint}】`);
+    addChatMessage('系统', `💡 进阶提示①：【${hint}】`, true);
+  } else if (level === 2) {
+    currentHint2 = hint;
+    if (!isDrawer) {
+      hintContainer.innerHTML = `
+        <span class="hint-badge level-1">💡 提示①：${escapeHtml(currentHint1)}</span>
+        <span class="hint-badge level-2">💡 提示②：${escapeHtml(hint)}</span>
+      `;
+    }
+    showToast(`💡 进阶提示②揭晓：【${hint}】`);
+    addChatMessage('系统', `💡 终极提示②：【${hint}】`, true);
+  }
+});
+
+// 作画倒计时跳动
 socket.on('timer_tick', ({ seconds }) => {
   timerText.innerText = seconds;
   if (seconds <= 15) {
@@ -580,7 +630,8 @@ socket.on('round_win', (data) => {
   addChatMessage('系统', `🎉 猜中啦！答案是【${data.word}】，耗时 ${data.elapsedSeconds} 秒！`, true);
   generatePolaroidMemoryCard(
     data.word, 
-    data.category, 
+    data.hint1,
+    data.hint2,
     data.drawerName, 
     data.drawerAvatar || '🎨', 
     data.guesserName, 
