@@ -16,13 +16,17 @@ const io = new Server(server, {
 const PORT = process.env.PORT || 3000;
 const WORDS_FILE = path.join(__dirname, 'words.json');
 
-// 加载词库（包含 word, hint1, hint2）
+// 加载词库（去除潜在的 UTF-8 BOM）
 let wordBank = { words: [], customWords: [] };
 function loadWords() {
   try {
-    const data = fs.readFileSync(WORDS_FILE, 'utf8');
-    wordBank = JSON.parse(data);
-    console.log(`成功载入全新词库，共计 ${wordBank.words ? wordBank.words.length : 0} 条词汇与进阶提示`);
+    let raw = fs.readFileSync(WORDS_FILE, 'utf8');
+    if (raw.charCodeAt(0) === 0xFEFF) {
+      raw = raw.slice(1);
+    }
+    wordBank = JSON.parse(raw);
+    const count = (wordBank.words ? wordBank.words.length : 0);
+    console.log(`成功载入 500 词库，实际有效词汇条数: ${count}`);
   } catch (err) {
     console.error('加载词库失败，使用备用词库:', err);
     wordBank = {
@@ -77,7 +81,7 @@ function getAllWordsPool() {
   return allPool;
 }
 
-// 获取 N 个互不相同的候选词（自主选词功能）
+// 从 500 个词库中真正随机挑出 4 个（支持换一批刷新）
 function getCandidateWords(count = 4, excludeWords = []) {
   const pool = getAllWordsPool();
   const filtered = pool.filter(item => !excludeWords.includes(item.word));
@@ -93,10 +97,6 @@ function getCandidateWords(count = 4, excludeWords = []) {
       selected.push(item);
     }
     if (selected.length >= count) break;
-  }
-
-  while (selected.length < count) {
-    selected.push({ word: "摩天轮", hint1: "游乐园慢慢转", hint2: "高处看城市" });
   }
 
   return selected;
@@ -119,7 +119,8 @@ function broadcastRoomInfo(roomId) {
       avatar: p.avatar || '🐱',
       isReady: !!p.isReady,
       score: p.score || 0,
-      isDrawer: room.state !== 'lobby' && idx === room.currentDrawerIndex
+      isDrawer: room.state !== 'lobby' && idx === room.currentDrawerIndex,
+      preferredRole: p.preferredRole || null
     })),
     playerCount: room.players.length,
     state: room.state,
@@ -148,7 +149,7 @@ io.on('connection', (socket) => {
         currentWordObj: null,
         candidateWords: [],
         state: 'lobby', // 'lobby' | 'selecting_word' | 'playing' | 'round_end'
-        gameStarted: false, // 一旦开始，后续回合全自动循环，无需每局再点准备
+        gameStarted: false,
         timerSeconds: 90,
         timerInterval: null,
         hint1Revealed: false,
@@ -162,18 +163,20 @@ io.on('connection', (socket) => {
 
     const currentRoom = rooms[userRoom];
 
-    // 检查是否已有同名玩家重连
+    // 检查是否已有同名玩家重连，并无缝更新其 socketId
     const existingIndex = currentRoom.players.findIndex(p => p.name === userName);
     if (existingIndex !== -1) {
       currentRoom.players[existingIndex].socketId = socket.id;
       currentRoom.players[existingIndex].avatar = userAvatar;
+      console.log(`[${userRoom}] 玩家重连并更新 Socket: ${userName} -> ${socket.id}`);
     } else {
       const newPlayer = {
         socketId: socket.id,
         name: userName,
         avatar: userAvatar,
         isReady: false,
-        score: 0
+        score: 0,
+        preferredRole: null
       };
       if (currentRoom.players.length >= 2) {
         currentRoom.players[1] = newPlayer;
@@ -182,23 +185,23 @@ io.on('connection', (socket) => {
       }
     }
 
-    console.log(`[${userRoom}] 玩家加入: ${userAvatar} ${userName}，当前人数: ${currentRoom.players.length}`);
-
     broadcastRoomInfo(userRoom);
 
-    // 如果中途重连且正在画画，补发画板与回合状态
-    if (currentRoom.state === 'playing' && currentRoom.currentWordObj) {
+    // 如果中途重连，立即补发当前画板完整历史以防止画面丢失
+    if (currentRoom.state === 'playing') {
       socket.emit('sync_canvas', currentRoom.drawHistory);
-      const isDrawer = currentRoom.players[currentRoom.currentDrawerIndex]?.socketId === socket.id;
-      socket.emit('rejoin_round', {
-        isDrawer,
-        word: isDrawer ? currentRoom.currentWordObj.word : null,
-        wordLength: currentRoom.currentWordObj.word.length,
-        hint1: currentRoom.hint1Revealed ? currentRoom.currentWordObj.hint1 : null,
-        hint2: currentRoom.hint2Revealed ? currentRoom.currentWordObj.hint2 : null,
-        drawerName: currentRoom.players[currentRoom.currentDrawerIndex]?.name,
-        remainingSeconds: currentRoom.timerSeconds
-      });
+      const isDrawer = currentRoom.players[currentRoom.currentDrawerIndex]?.name === userName;
+      if (currentRoom.currentWordObj) {
+        socket.emit('rejoin_round', {
+          isDrawer,
+          word: isDrawer ? currentRoom.currentWordObj.word : null,
+          wordLength: currentRoom.currentWordObj.word.length,
+          hint1: currentRoom.hint1Revealed ? currentRoom.currentWordObj.hint1 : null,
+          hint2: currentRoom.hint2Revealed ? currentRoom.currentWordObj.hint2 : null,
+          drawerName: currentRoom.players[currentRoom.currentDrawerIndex]?.name,
+          remainingSeconds: currentRoom.timerSeconds
+        });
+      }
     }
   });
 
@@ -208,19 +211,28 @@ io.on('connection', (socket) => {
     const room = rooms[userRoom];
     if (room.state !== 'lobby') return;
 
-    const player = room.players.find(p => p.socketId === socket.id);
+    const player = room.players.find(p => p.socketId === socket.id || p.name === userName);
     if (!player) return;
 
     player.isReady = !player.isReady;
-    console.log(`[${userRoom}] 玩家 ${player.name} 准备状态: ${player.isReady}`);
     broadcastRoomInfo(userRoom);
 
-    // 检查是否 2 人且均已就绪
     if (room.players.length >= 2 && room.players.every(p => p.isReady)) {
-      console.log(`[${userRoom}] 双方首次就绪，启动全自动对局循环！`);
       room.gameStarted = true;
       startWordSelectionPhase(userRoom);
     }
+  });
+
+  // 下一局角色意向选择 (Req 3: 玩家自由选猜还是画)
+  socket.on('set_role_preference', ({ role }) => {
+    if (!userRoom || !rooms[userRoom]) return;
+    const room = rooms[userRoom];
+    const player = room.players.find(p => p.socketId === socket.id || p.name === userName);
+    if (!player) return;
+
+    player.preferredRole = role; // 'drawer' | 'guesser'
+    console.log(`[${userRoom}] 玩家 ${player.name} 选择下一局意向: ${role}`);
+    broadcastRoomInfo(userRoom);
   });
 
   // 开始自主选词阶段 (4 选 1 + 换一批)
@@ -240,15 +252,15 @@ io.on('connection', (socket) => {
     const drawer = room.players[room.currentDrawerIndex];
     const guesser = room.players[1 - room.currentDrawerIndex];
 
-    console.log(`[${roomId}] 画手 ${drawer.name} 正在挑选词汇，备选:`, room.candidateWords.map(c => c.word));
+    console.log(`[${roomId}] 画手 ${drawer.name} 挑选词汇，备选:`, room.candidateWords.map(c => c.word));
 
-    // 通知画手自主选词（4选1，带提示预览）
+    // 通知画手
     io.to(drawer.socketId).emit('pick_word_turn', {
       candidates: room.candidateWords,
       duration: room.wordPickSeconds
     });
 
-    // 通知猜题人等待
+    // 通知猜题人
     io.to(guesser.socketId).emit('guesser_waiting_pick', {
       drawerName: drawer.name,
       drawerAvatar: drawer.avatar,
@@ -257,7 +269,7 @@ io.on('connection', (socket) => {
 
     broadcastRoomInfo(roomId);
 
-    // 开启 15 秒选词倒计时
+    // 15 秒选词倒计时
     room.wordPickInterval = setInterval(() => {
       room.wordPickSeconds--;
       io.to(roomId).emit('word_pick_tick', { seconds: room.wordPickSeconds });
@@ -271,19 +283,19 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
-  // 画手请求换一批词（刷新 4 个新词）
+  // 画手刷新候选词（从 500 词库中换一批）
   socket.on('refresh_candidates', () => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
     if (room.state !== 'selecting_word') return;
 
     const drawer = room.players[room.currentDrawerIndex];
-    if (!drawer || drawer.socketId !== socket.id) return;
+    if (!drawer || drawer.name !== userName) return;
 
     const oldWords = room.candidateWords.map(c => c.word);
     room.candidateWords = getCandidateWords(4, oldWords);
 
-    console.log(`[${userRoom}] 画手 ${drawer.name} 刷新了候选词`);
+    console.log(`[${userRoom}] 画手 ${drawer.name} 刷新了候选词:`, room.candidateWords.map(c => c.word));
 
     socket.emit('pick_word_turn', {
       candidates: room.candidateWords,
@@ -291,14 +303,14 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 画手确认挑选某个词
+  // 画手选定某个词
   socket.on('choose_word', ({ word, hint1, hint2 }) => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
     if (room.state !== 'selecting_word') return;
 
     const drawer = room.players[room.currentDrawerIndex];
-    if (!drawer || drawer.socketId !== socket.id) return;
+    if (!drawer || drawer.name !== userName) return;
 
     if (room.wordPickInterval) clearInterval(room.wordPickInterval);
 
@@ -306,7 +318,7 @@ io.on('connection', (socket) => {
     startDrawingPhase(userRoom, { word, hint1, hint2 });
   });
 
-  // 正式进入作画与猜题阶段（包含进阶提示逻辑）
+  // 正式进入作画与猜题阶段（双重进阶提示）
   function startDrawingPhase(roomId, wordObj) {
     const room = rooms[roomId];
     if (!room || room.players.length < 2) return;
@@ -322,7 +334,6 @@ io.on('connection', (socket) => {
     const drawer = room.players[room.currentDrawerIndex];
     const guesser = room.players[1 - room.currentDrawerIndex];
 
-    // 通知画手
     io.to(drawer.socketId).emit('round_start', {
       isDrawer: true,
       word: wordObj.word,
@@ -334,7 +345,6 @@ io.on('connection', (socket) => {
       guesserAvatar: guesser.avatar
     });
 
-    // 通知猜题人
     io.to(guesser.socketId).emit('round_start', {
       isDrawer: false,
       wordLength: wordObj.word.length,
@@ -346,15 +356,14 @@ io.on('connection', (socket) => {
 
     broadcastRoomInfo(roomId);
 
-    // 开启作画倒计时与进阶提示触发
+    // 倒计时与阶梯提示
     room.timerInterval = setInterval(() => {
       room.timerSeconds--;
       io.to(roomId).emit('timer_tick', { seconds: room.timerSeconds });
 
-      // 进阶提示 1: 剩余 60 秒时（经过 30 秒）自动揭晓
+      // 剩余 60 秒触发第一提示
       if (room.timerSeconds === 60 && !room.hint1Revealed) {
         room.hint1Revealed = true;
-        console.log(`[${roomId}] 触发进阶提示 1: ${wordObj.hint1}`);
         io.to(roomId).emit('progressive_hint', {
           level: 1,
           hint: wordObj.hint1,
@@ -362,10 +371,9 @@ io.on('connection', (socket) => {
         });
       }
 
-      // 进阶提示 2: 剩余 30 秒时（经过 60 秒）自动揭晓
+      // 剩余 30 秒触发第二提示
       if (room.timerSeconds === 30 && !room.hint2Revealed) {
         room.hint2Revealed = true;
-        console.log(`[${roomId}] 触发进阶提示 2: ${wordObj.hint2}`);
         io.to(roomId).emit('progressive_hint', {
           level: 2,
           hint: wordObj.hint2,
@@ -385,27 +393,55 @@ io.on('connection', (socket) => {
           drawerName: drawer.name
         });
 
-        // 自动轮换角色并直接进入下一轮自主选词（无需再点准备）
-        room.currentDrawerIndex = 1 - room.currentDrawerIndex;
         broadcastRoomInfo(roomId);
 
+        // 6秒展示结束后，根据玩家意向决定下一局画手
         setTimeout(() => {
           if (rooms[roomId] && rooms[roomId].players.length >= 2) {
+            resolveNextDrawer(roomId);
             startWordSelectionPhase(roomId);
           }
-        }, 5000);
+        }, 6500);
       }
     }, 1000);
   }
 
-  // 绘图同步（仅当前画手可以绘图）
+  // 仲裁下一局画手（满足玩家自主选择）
+  function resolveNextDrawer(roomId) {
+    const room = rooms[roomId];
+    if (!room || room.players.length < 2) return;
+
+    const p0 = room.players[0];
+    const p1 = room.players[1];
+    const pref0 = p0?.preferredRole;
+    const pref1 = p1?.preferredRole;
+
+    if (pref0 === 'drawer' && pref1 !== 'drawer') {
+      room.currentDrawerIndex = 0;
+    } else if (pref1 === 'drawer' && pref0 !== 'drawer') {
+      room.currentDrawerIndex = 1;
+    } else if (pref0 === 'guesser' && pref1 !== 'guesser') {
+      room.currentDrawerIndex = 1;
+    } else if (pref1 === 'guesser' && pref0 !== 'guesser') {
+      room.currentDrawerIndex = 0;
+    } else {
+      // 两人意向冲突或均未做选择，保持公平轮换
+      room.currentDrawerIndex = 1 - room.currentDrawerIndex;
+    }
+
+    // 重置意向
+    p0.preferredRole = null;
+    p1.preferredRole = null;
+  }
+
+  // 绘图同步（高容错：只要名字匹配画手即允许广播，防止重连后短暂 socketId 校验偏差）
   socket.on('draw_action', (data) => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
     if (room.state !== 'playing') return;
     
     const currentDrawer = room.players[room.currentDrawerIndex];
-    if (!currentDrawer || currentDrawer.socketId !== socket.id) return;
+    if (!currentDrawer || currentDrawer.name !== userName) return;
 
     if (data.type === 'clear') {
       room.drawHistory = [];
@@ -416,7 +452,7 @@ io.on('connection', (socket) => {
     socket.to(userRoom).emit('draw_action', data);
   });
 
-  // 猜答案 / 聊天消息
+  // 猜答案
   socket.on('send_guess', ({ text }) => {
     if (!userRoom || !rooms[userRoom] || !text) return;
     const room = rooms[userRoom];
@@ -426,10 +462,9 @@ io.on('connection', (socket) => {
     const currentGuesser = room.players[1 - room.currentDrawerIndex];
     const currentDrawer = room.players[room.currentDrawerIndex];
 
-    const isGuesser = currentGuesser && currentGuesser.socketId === socket.id;
+    const isGuesser = currentGuesser && currentGuesser.name === userName;
 
     if (isGuesser && guessText.toLowerCase() === room.currentWordObj.word.toLowerCase()) {
-      // 猜中啦！
       clearInterval(room.timerInterval);
       room.state = 'round_end';
       const elapsedSeconds = Math.max(1, Math.floor((Date.now() - room.roundStartTime) / 1000));
@@ -450,12 +485,12 @@ io.on('connection', (socket) => {
         elapsedSeconds
       });
 
-      // 角色互换，保持就绪状态，6秒后自动进入下一局自主选词
-      room.currentDrawerIndex = 1 - room.currentDrawerIndex;
       broadcastRoomInfo(userRoom);
 
+      // 6.5秒展示回忆卡并等待玩家意向选择后，进入下一局
       setTimeout(() => {
         if (rooms[userRoom] && rooms[userRoom].players.length >= 2) {
+          resolveNextDrawer(userRoom);
           startWordSelectionPhase(userRoom);
         }
       }, 6500);
@@ -480,7 +515,7 @@ io.on('connection', (socket) => {
     });
   });
 
-  // 添加自定义新词（投喂新词）
+  // 添加自定义新词
   socket.on('add_custom_word', ({ word }) => {
     if (!userRoom) return;
     const success = addCustomWord(word);
@@ -502,7 +537,7 @@ io.on('connection', (socket) => {
       if (room.timerInterval) clearInterval(room.timerInterval);
       if (room.wordPickInterval) clearInterval(room.wordPickInterval);
       room.state = 'lobby';
-      room.gameStarted = false; // 有人离开则重置回大厅等待
+      room.gameStarted = false;
 
       broadcastRoomInfo(userRoom);
 

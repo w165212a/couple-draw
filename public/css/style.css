@@ -53,7 +53,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 6px;
   padding: 4px 0;
   flex-shrink: 0;
 }
@@ -64,9 +64,9 @@ html, body {
   gap: 5px;
   background: #FFF;
   border: 1px solid var(--border-color);
-  padding: 5px 10px;
+  padding: 5px 9px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
@@ -77,35 +77,41 @@ html, body {
   transform: scale(0.96);
 }
 
-.status-indicator {
+.header-right-actions {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--text-muted);
 }
 
-.status-indicator .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #FF9F43;
+.gallery-pill-btn {
+  background: #F3E8FF;
+  color: #7E22CE;
+  border: 1px solid rgba(126, 34, 206, 0.25);
+  padding: 5px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
-.status-indicator.connected .dot {
-  background: #10AC84;
+.gallery-pill-btn:active {
+  transform: scale(0.95);
+  background: #E9D5FF;
 }
 
 .icon-btn {
   background: var(--soft-pink);
   color: var(--primary-pink);
   border: 1px solid rgba(255, 107, 129, 0.3);
-  padding: 5px 10px;
+  padding: 5px 9px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .icon-btn:active {
@@ -275,7 +281,7 @@ html, body {
   white-space: normal;
 }
 
-/* 进阶提示栏 (Req 2) */
+/* 进阶提示栏 */
 .hint-container {
   display: flex;
   align-items: center;
@@ -707,7 +713,7 @@ html, body {
   cursor: pointer;
 }
 
-/* 自主选词弹窗 (4选1 + 换一批 + 提示预览) */
+/* 自主选词弹窗 */
 .select-word-card {
   max-width: 400px;
   padding: 18px 14px;
@@ -850,6 +856,57 @@ html, body {
   font-weight: 500;
 }
 
+/* 下一局角色自主选择卡片 (Req 3) */
+.role-choice-card {
+  background: #FFF5F7;
+  border: 1.5px solid #FFD3DC;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.choice-title {
+  font-size: 13px;
+  font-weight: bold;
+  color: #C0392B;
+}
+
+.choice-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.choice-role-btn {
+  flex: 1;
+  background: #FFF;
+  border: 1.5px solid #FFCCD5;
+  padding: 7px 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.choice-role-btn:active {
+  transform: scale(0.96);
+}
+
+.choice-role-btn.active {
+  background: var(--primary-pink);
+  border-color: var(--primary-pink);
+  color: #FFF;
+  box-shadow: 0 2px 8px rgba(255, 107, 129, 0.35);
+}
+
+.choice-status {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .next-round-countdown {
   font-size: 12px;
   color: var(--text-muted);
@@ -858,4 +915,96 @@ html, body {
 .next-round-countdown span {
   color: var(--primary-pink);
   font-weight: bold;
+}
+
+/* 恋爱画册弹窗样式 (永久保存) */
+.gallery-modal-card {
+  max-width: 440px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.gallery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.close-gallery-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.gallery-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  overflow-y: auto;
+  padding: 6px 2px;
+  max-height: 55vh;
+}
+
+.gallery-item {
+  background: #FFFAF5;
+  border: 1px solid #F0E5D8;
+  border-radius: var(--radius-sm);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.gallery-item:active {
+  transform: scale(0.97);
+}
+
+.gallery-item img {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  display: block;
+}
+
+.gallery-item-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text-main);
+  text-align: center;
+}
+
+.gallery-item-date {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.gallery-empty {
+  grid-column: span 2;
+  padding: 40px 10px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.clear-gallery-btn {
+  background: none;
+  border: none;
+  color: #B2BEC3;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 6px;
+  text-decoration: underline;
 }

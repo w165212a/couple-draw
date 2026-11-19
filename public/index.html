@@ -15,28 +15,28 @@
         <span id="roomNameDisplay">房间: sweet520</span>
       </div>
 
-      <div class="status-indicator" id="statusIndicator">
-        <span class="dot"></span>
-        <span id="statusText">等待连接...</span>
-      </div>
+      <div class="header-right-actions">
+        <!-- 恋爱画册按钮 (本地离线永久保存) -->
+        <button class="gallery-pill-btn" id="openGalleryBtn" title="查看我们的画作回忆">
+          📖 恋爱画册
+        </button>
 
-      <button class="icon-btn" id="addWordBtn" title="投喂属于你们的专属词">
-        <span>+ 投喂新词</span>
-      </button>
+        <button class="icon-btn" id="addWordBtn" title="投喂属于你们的专属词">
+          + 投喂新词
+        </button>
+      </div>
     </header>
 
-    <!-- 玩家列表栏 (房间人员、头像、分数，并在开局后自动隐藏准备按钮) -->
+    <!-- 玩家列表栏 (房间人员、头像、分数，开局后自动隐藏准备按钮) -->
     <section class="player-list-bar" id="playerListBar">
       <div class="players-chips-container" id="playersChipsContainer">
         <!-- 动态生成玩家卡片 -->
       </div>
-      <!-- 仅在开局前显示的准备按钮，一旦开局自动隐藏 -->
       <button class="ready-action-btn" id="readyActionBtn">❤️ 我准备好了</button>
     </section>
 
     <!-- 题目与进阶提示横幅 -->
     <section class="topic-banner" id="topicBanner">
-      <!-- 第一行：角色徽章 + 倒计时 -->
       <div class="banner-top-row">
         <div class="badge-group">
           <span class="role-badge" id="roleBadge">等待准备</span>
@@ -46,12 +46,11 @@
         </div>
       </div>
 
-      <!-- 第二行：题目内容（全宽自适应，绝对不截断） -->
       <div class="banner-bottom-row">
         <span class="topic-word" id="topicWord">首次进房双方点击【准备】，即可全自动畅玩！</span>
       </div>
 
-      <!-- 第三行：进阶提示区域 (Req 2: 一定时间没猜到给第一个提示，再没猜到给后一个) -->
+      <!-- 进阶提示区域 -->
       <div class="hint-container" id="hintContainer" style="display: none;">
         <span class="hint-placeholder" id="hintPlaceholder">💡 进阶提示：开局30秒后解锁线索①...</span>
       </div>
@@ -61,11 +60,10 @@
     <main class="canvas-wrapper">
       <div class="canvas-container" id="canvasContainer">
         <canvas id="paintCanvas"></canvas>
-        <!-- 弹幕浮动层 -->
         <div class="reaction-layer" id="reactionLayer"></div>
       </div>
 
-      <!-- 画笔工具栏（仅画手可见/可用） -->
+      <!-- 画笔工具栏（仅画手可见） -->
       <div class="tools-bar" id="toolsBar">
         <div class="color-palette">
           <button class="color-dot active" data-color="#2d3436" style="background: #2d3436;"></button>
@@ -87,7 +85,6 @@
 
     <!-- 底部互动与猜词区域 -->
     <footer class="interaction-footer">
-      <!-- 快捷调侃表情/气泡弹幕 -->
       <div class="quick-reactions">
         <button class="reaction-btn" data-emoji="🎨" data-text="灵魂画手上线了！">🎨 灵魂画手</button>
         <button class="reaction-btn" data-emoji="🤔" data-text="这是啥呀完全看不懂~">🤔 这是啥呀</button>
@@ -96,7 +93,6 @@
         <button class="reaction-btn" data-emoji="💯" data-text="太像了太神了！">💯 绝了太像了</button>
       </div>
 
-      <!-- 猜词输入与实时反馈 -->
       <div class="chat-guess-area">
         <div class="chat-bubble-stream" id="chatStream">
           <div class="chat-hint">猜词记录将在此展示~</div>
@@ -122,7 +118,6 @@
         <h3>💕 欢迎进入专属小世界</h3>
         <p class="modal-sub">第一步：挑选一个可爱的专属头像</p>
         
-        <!-- 头像挑选网格 -->
         <div class="avatar-grid" id="avatarGrid">
           <button class="avatar-btn active" data-avatar="🐱">🐱</button>
           <button class="avatar-btn" data-avatar="🐶">🐶</button>
@@ -144,14 +139,14 @@
       </div>
     </div>
 
-    <!-- 2. 开局画手自主选词弹窗 (4选1 + 换一批 + 提示预览) -->
+    <!-- 2. 开局画手自主选词弹窗 (500词海量随机 4选1 + 换一批) -->
     <div class="modal-overlay" id="wordSelectModal" style="display: none;">
       <div class="modal-card select-word-card">
         <div class="modal-header-with-timer">
           <span class="modal-title">🎨 请挑选你要画的题目</span>
           <span class="select-timer-badge" id="selectTimerBadge">⏱️ 15s</span>
         </div>
-        <p class="select-hint">点击卡片选定（下方附带对方会收到的进阶提示）：</p>
+        <p class="select-hint">点击卡片选定（下方附带对方会收到的进阶线索）：</p>
 
         <!-- 4 选 1 候选词网格 -->
         <div class="candidate-words-grid" id="candidateWordsGrid">
@@ -188,7 +183,7 @@
       </div>
     </div>
 
-    <!-- 5. 猜中胜利：拍立得画作回忆卡弹窗 -->
+    <!-- 5. 猜中胜利：拍立得画作回忆卡弹窗（附带自主选择下一局画还是猜） -->
     <div class="modal-overlay" id="victoryModal" style="display: none;">
       <div class="modal-card polaroid-card">
         <div class="polaroid-header">
@@ -201,10 +196,37 @@
         </div>
 
         <p class="polaroid-tip">📱 手机端长按上方图片即可保存到相册</p>
+
+        <!-- Req 3: 自主选择下一局画还是猜 -->
+        <div class="role-choice-card" id="roleChoiceCard">
+          <div class="choice-title">下局想当什么？（可自由挑选）</div>
+          <div class="choice-buttons">
+            <button class="choice-role-btn" id="chooseDrawerBtn">🎨 我想画画</button>
+            <button class="choice-role-btn" id="chooseGuesserBtn">🤔 我想猜题</button>
+          </div>
+          <div class="choice-status" id="myChoiceStatus">（双方未选或冲突时自动轮流互换）</div>
+        </div>
         
         <div class="next-round-countdown" id="nextRoundTimer">
-          下一局将在 <span>6</span> 秒后自动开始...
+          下一局将在 <span>6</span> 秒后开始...
         </div>
+      </div>
+    </div>
+
+    <!-- 6. 恋爱画册弹窗 (保存的历史画作瀑布流) -->
+    <div class="modal-overlay" id="galleryModal" style="display: none;">
+      <div class="modal-card gallery-modal-card">
+        <div class="gallery-header">
+          <h3>📖 我们的恋爱画册</h3>
+          <button class="close-gallery-btn" id="closeGalleryBtn">✕</button>
+        </div>
+        <p class="gallery-tip">手机本地永久保存，随时翻看我们的小默契~</p>
+
+        <div class="gallery-grid" id="galleryGrid">
+          <!-- 动态加载历史画作图片 -->
+        </div>
+
+        <button class="clear-gallery-btn" id="clearGalleryBtn" style="display: none;">清空本地画册</button>
       </div>
     </div>
 

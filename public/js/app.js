@@ -7,6 +7,7 @@ const roomNameDisplay = document.getElementById('roomNameDisplay');
 const statusIndicator = document.getElementById('statusIndicator');
 const statusText = document.getElementById('statusText');
 const addWordBtn = document.getElementById('addWordBtn');
+const openGalleryBtn = document.getElementById('openGalleryBtn');
 
 // 玩家列表与准备栏
 const playersChipsContainer = document.getElementById('playersChipsContainer');
@@ -60,6 +61,14 @@ const submitWordBtn = document.getElementById('submitWordBtn');
 const victoryModal = document.getElementById('victoryModal');
 const polaroidImage = document.getElementById('polaroidImage');
 const nextRoundTimer = document.getElementById('nextRoundTimer');
+const chooseDrawerBtn = document.getElementById('chooseDrawerBtn');
+const chooseGuesserBtn = document.getElementById('chooseGuesserBtn');
+const myChoiceStatus = document.getElementById('myChoiceStatus');
+
+const galleryModal = document.getElementById('galleryModal');
+const galleryGrid = document.getElementById('galleryGrid');
+const closeGalleryBtn = document.getElementById('closeGalleryBtn');
+const clearGalleryBtn = document.getElementById('clearGalleryBtn');
 
 // 状态变量
 let isDrawer = false;
@@ -109,6 +118,14 @@ function initPlayerAndRoom() {
   }
 }
 
+// 自动重连高容错支持（解决锁屏或网络轻微抖动导致的画板失联）
+socket.on('connect', () => {
+  console.log('Socket 已连接:', socket.id);
+  if (playerName) {
+    joinGame();
+  }
+});
+
 function setupAvatarGridUI() {
   const avatarButtons = avatarGrid.querySelectorAll('.avatar-btn');
   avatarButtons.forEach(btn => {
@@ -143,7 +160,6 @@ function joinGame() {
   socket.emit('join_room', { room: roomName, name: playerName, avatar: selectedAvatar });
 }
 
-// 复制专属房间链接
 roomBtn.addEventListener('click', () => {
   const shareUrl = `${window.location.origin}${window.location.pathname}?room=${encodeURIComponent(roomName)}`;
   navigator.clipboard.writeText(shareUrl).then(() => {
@@ -153,12 +169,12 @@ roomBtn.addEventListener('click', () => {
   });
 });
 
-// 2. 准备 / 取消准备交互 (首次进房点击)
+// 2. 准备 / 取消准备交互
 readyActionBtn.addEventListener('click', () => {
   socket.emit('toggle_ready');
 });
 
-// 3. 画手自主选词 (4选1 + 换一批 + 提示预览)
+// 3. 画手自主选词 (500 词库海量随机 4选1 + 换一批)
 function renderCandidateWords(candidates) {
   candidateWordsGrid.innerHTML = '';
   candidates.forEach(c => {
@@ -180,7 +196,7 @@ refreshWordsBtn.addEventListener('click', () => {
   socket.emit('refresh_candidates');
 });
 
-// 4. 画板高分屏适配与绘图同步
+// 4. 画板高分屏适配与绘图同步（增加 Safari Pointer 安全捕获）
 function setupCanvas() {
   const rect = canvasContainer.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -232,7 +248,6 @@ function executeDrawAction(action, saveToHistory = true) {
   }
 }
 
-// 统一 Pointer Events 监听（手机触屏、鼠标与触控笔）
 function getRelativeCoord(e) {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -245,9 +260,14 @@ canvas.addEventListener('pointerdown', (e) => {
   if (!isDrawer) return;
   e.preventDefault();
   isDrawing = true;
-  canvas.setPointerCapture(e.pointerId);
+
+  try {
+    canvas.setPointerCapture(e.pointerId);
+  } catch (err) {}
 
   const coord = getRelativeCoord(e);
+  if (isNaN(coord.x) || isNaN(coord.y)) return;
+
   const strokeColor = isEraser ? '#FFFFFF' : currentColor;
   const strokeSize = isEraser ? 16 : currentSize;
 
@@ -268,6 +288,8 @@ canvas.addEventListener('pointermove', (e) => {
   e.preventDefault();
 
   const coord = getRelativeCoord(e);
+  if (isNaN(coord.x) || isNaN(coord.y)) return;
+
   const strokeColor = isEraser ? '#FFFFFF' : currentColor;
   const strokeSize = isEraser ? 16 : currentSize;
 
@@ -286,6 +308,10 @@ canvas.addEventListener('pointermove', (e) => {
 function stopDrawing(e) {
   if (!isDrawing) return;
   isDrawing = false;
+  try {
+    if (e && e.pointerId) canvas.releasePointerCapture(e.pointerId);
+  } catch (err) {}
+
   const action = { type: 'end' };
   executeDrawAction(action);
   socket.emit('draw_action', action);
@@ -326,7 +352,28 @@ clearBtn.addEventListener('click', () => {
   }
 });
 
-// 5. 猜词与消息互动
+// 5. 下一局角色意向选择 (Req 3)
+chooseDrawerBtn.addEventListener('click', () => {
+  chooseDrawerBtn.classList.add('active');
+  chooseGuesserBtn.classList.remove('active');
+  myChoiceStatus.innerText = '已选择：🎨 想画画（等待下局开始...）';
+  socket.emit('set_role_preference', { role: 'drawer' });
+});
+
+chooseGuesserBtn.addEventListener('click', () => {
+  chooseGuesserBtn.classList.add('active');
+  chooseDrawerBtn.classList.remove('active');
+  myChoiceStatus.innerText = '已选择：🤔 想猜题（等待下局开始...）';
+  socket.emit('set_role_preference', { role: 'guesser' });
+});
+
+function resetRoleChoiceUI() {
+  chooseDrawerBtn.classList.remove('active');
+  chooseGuesserBtn.classList.remove('active');
+  myChoiceStatus.innerText = '（双方未选或冲突时自动轮流互换）';
+}
+
+// 6. 猜词与消息互动
 guessForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = guessInput.value.trim();
@@ -378,7 +425,62 @@ submitWordBtn.addEventListener('click', () => {
   wordModal.style.display = 'none';
 });
 
-// 6. 生成拍立得画作回忆卡
+// 7. 恋爱画册 (本地持久化存储，100% 独立于云端，永久不丢)
+function saveCardToGallery(cardDataUrl, word, dateStr) {
+  try {
+    let gallery = JSON.parse(localStorage.getItem('couple_draw_gallery') || '[]');
+    gallery.unshift({
+      img: cardDataUrl,
+      word: word,
+      date: dateStr
+    });
+    // 本地最多保留 50 幅精品画作
+    if (gallery.length > 50) gallery = gallery.slice(0, 50);
+    localStorage.setItem('couple_draw_gallery', JSON.stringify(gallery));
+  } catch (e) {
+    console.warn('本地相册存储超额或失败:', e);
+  }
+}
+
+openGalleryBtn.addEventListener('click', renderGallery);
+closeGalleryBtn.addEventListener('click', () => galleryModal.style.display = 'none');
+
+function renderGallery() {
+  galleryGrid.innerHTML = '';
+  const gallery = JSON.parse(localStorage.getItem('couple_draw_gallery') || '[]');
+
+  if (gallery.length === 0) {
+    galleryGrid.innerHTML = `<div class="gallery-empty">还没有画作记录哦，快和宝贝猜对一局来解锁第一幅画吧！💕</div>`;
+    clearGalleryBtn.style.display = 'none';
+  } else {
+    clearGalleryBtn.style.display = 'block';
+    gallery.forEach((item) => {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'gallery-item';
+      cardEl.innerHTML = `
+        <img src="${item.img}" alt="${item.word}">
+        <span class="gallery-item-title">“${escapeHtml(item.word)}”</span>
+        <span class="gallery-item-date">${escapeHtml(item.date)}</span>
+      `;
+      cardEl.addEventListener('click', () => {
+        polaroidImage.src = item.img;
+        victoryModal.style.display = 'flex';
+        nextRoundTimer.innerHTML = '浏览相册画作中 (可长按保存)';
+      });
+      galleryGrid.appendChild(cardEl);
+    });
+  }
+  galleryModal.style.display = 'flex';
+}
+
+clearGalleryBtn.addEventListener('click', () => {
+  if (confirm('确认清空你手机上的画册记录吗？（已保存至相册的图片不受影响）')) {
+    localStorage.removeItem('couple_draw_gallery');
+    renderGallery();
+  }
+});
+
+// 8. 生成拍立得画作回忆卡
 function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, guesser, guesserAvatar, seconds) {
   const card = document.createElement('canvas');
   card.width = 640;
@@ -438,16 +540,22 @@ function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, gu
   c.fillText('💕 默契猜画印章 💕', 10, 26);
   c.restore();
 
-  polaroidImage.src = card.toDataURL('image/png');
+  const dataUrl = card.toDataURL('image/png');
+  polaroidImage.src = dataUrl;
+
+  // 存入手机永久恋爱画册 (Req 8)
+  saveCardToGallery(dataUrl, word, dateStr);
+
+  resetRoleChoiceUI();
   victoryModal.style.display = 'flex';
 
   let remaining = 6;
-  nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后自动开始...`;
+  nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后开始...`;
   if (countdownInterval) clearInterval(countdownInterval);
   countdownInterval = setInterval(() => {
     remaining--;
     if (remaining > 0) {
-      nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后自动开始...`;
+      nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后开始...`;
     } else {
       clearInterval(countdownInterval);
       victoryModal.style.display = 'none';
@@ -455,13 +563,11 @@ function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, gu
   }, 1000);
 }
 
-// 7. Socket 监听服务
+// 9. Socket 监听服务
 
-// 房间人员与准备状态更新 (Req 1: 首次准备后自动隐藏按钮，后续全自动)
 socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
   isGameActive = !!gameStarted;
 
-  // 渲染玩家列表卡片
   playersChipsContainer.innerHTML = '';
   players.forEach(p => {
     const chip = document.createElement('div');
@@ -475,13 +581,11 @@ socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
     `;
     playersChipsContainer.appendChild(chip);
 
-    // 更新当前玩家的准备按钮状态
     if (p.name === playerName) {
       isMyReady = p.isReady;
     }
   });
 
-  // 如果游戏已开始，彻底隐藏准备按钮！(Req 1)
   if (isGameActive) {
     readyActionBtn.style.display = 'none';
   } else {
@@ -531,7 +635,6 @@ socket.on('guesser_waiting_pick', ({ drawerName, drawerAvatar, duration }) => {
   guesserWaitTimer.innerText = `⏱️ ${duration}s`;
 });
 
-// 选词倒计时跳动
 socket.on('word_pick_tick', ({ seconds }) => {
   selectTimerBadge.innerText = `⏱️ ${seconds}s`;
   guesserWaitTimer.innerText = `⏱️ ${seconds}s`;
@@ -551,7 +654,6 @@ socket.on('round_start', (data) => {
   currentHint1 = data.hint1 || '';
   currentHint2 = data.hint2 || '';
 
-  // 显示进阶提示栏
   hintContainer.style.display = 'flex';
 
   if (isDrawer) {
@@ -564,7 +666,6 @@ socket.on('round_start', (data) => {
     guessInput.placeholder = '你正在作画，等待对方猜词...';
     sendBtn.disabled = true;
 
-    // 画手直接能看到将要提供的进阶线索
     hintContainer.innerHTML = `
       <span class="hint-badge level-1">线索①：${escapeHtml(data.hint1 || '等待揭晓')}</span>
       <span class="hint-badge level-2">线索②：${escapeHtml(data.hint2 || '等待揭晓')}</span>
@@ -580,12 +681,11 @@ socket.on('round_start', (data) => {
     sendBtn.disabled = false;
     guessInput.focus();
 
-    // 猜题人提示栏初始状态
     hintContainer.innerHTML = `<span class="hint-placeholder" id="hintPlaceholder">💡 进阶提示：开局30秒后解锁线索①...</span>`;
   }
 });
 
-// 进阶提示触发 (Req 2)
+// 进阶提示触发
 socket.on('progressive_hint', ({ level, hint, msg }) => {
   if (level === 1) {
     currentHint1 = hint;
@@ -610,7 +710,6 @@ socket.on('progressive_hint', ({ level, hint, msg }) => {
   }
 });
 
-// 作画倒计时跳动
 socket.on('timer_tick', ({ seconds }) => {
   timerText.innerText = seconds;
   if (seconds <= 15) {
@@ -620,12 +719,17 @@ socket.on('timer_tick', ({ seconds }) => {
   }
 });
 
-// 绘图同步
 socket.on('draw_action', (action) => {
   executeDrawAction(action);
 });
 
-// 猜中胜利
+// 补发全量画板历史（网络重连防卡死）
+socket.on('sync_canvas', (history) => {
+  console.log('同步全量画板数据:', history.length);
+  drawHistory = history || [];
+  redrawHistory();
+});
+
 socket.on('round_win', (data) => {
   addChatMessage('系统', `🎉 猜中啦！答案是【${data.word}】，耗时 ${data.elapsedSeconds} 秒！`, true);
   generatePolaroidMemoryCard(
@@ -640,13 +744,25 @@ socket.on('round_win', (data) => {
   );
 });
 
-// 时间到无人猜中
 socket.on('round_timeout', (data) => {
   addChatMessage('系统', `⏰ 时间到啦！正确答案是【${data.word}】`, false);
   showToast(`⏰ 时间到！答案是【${data.word}】`);
+  resetRoleChoiceUI();
+  victoryModal.style.display = 'flex';
+  let remaining = 6;
+  nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后开始...`;
+  if (countdownInterval) clearInterval(countdownInterval);
+  countdownInterval = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      nextRoundTimer.innerHTML = `下一局将在 <span>${remaining}</span> 秒后开始...`;
+    } else {
+      clearInterval(countdownInterval);
+      victoryModal.style.display = 'none';
+    }
+  }, 1000);
 });
 
-// 聊天与猜词展示
 socket.on('chat_message', ({ sender, avatar, text, isGuesser }) => {
   addChatMessage(`${avatar || '🐱'} ${sender}`, text, isGuesser);
 });
@@ -660,17 +776,14 @@ function addChatMessage(sender, text, isHighlight) {
   chatStream.scrollTop = chatStream.scrollHeight;
 }
 
-// 接收表情弹幕
 socket.on('reaction_popup', ({ sender, avatar, emoji, text }) => {
   triggerReactionBubble(sender, avatar, emoji, text);
 });
 
-// 新词添加广播通知
 socket.on('custom_word_added', ({ adder, word }) => {
   showToast(`💌 ${adder} 偷偷添加了新回忆词汇！`);
 });
 
-// Toast 提示
 function showToast(msg) {
   const toast = document.createElement('div');
   toast.innerText = msg;
