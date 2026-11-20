@@ -105,12 +105,80 @@ function getCandidateWords(count = 4, excludeWords = []) {
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 路由兼容：支持 /game 直接访问你画我猜对局页面
+// 路由兼容：支持 /game 与 /gomoku 直接访问
 app.get('/game', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'game.html'));
 });
 
-// 房间状态数据
+app.get('/gomoku', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'gomoku.html'));
+});
+
+// ==================== 五子棋游戏房间与判定逻辑 ====================
+const gomokuRooms = {};
+
+function checkGomokuWin(board, row, col, color) {
+  const directions = [
+    [0, 1],   // 水平
+    [1, 0],   // 垂直
+    [1, 1],   // 正斜 \
+    [1, -1]   // 反斜 /
+  ];
+
+  for (const [dr, dc] of directions) {
+    let line = [{ row, col }];
+
+    // 正向延伸
+    let r = row + dr;
+    let c = col + dc;
+    while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] === color) {
+      line.push({ row: r, col: c });
+      r += dr;
+      c += dc;
+    }
+
+    // 反向延伸
+    r = row - dr;
+    c = col - dc;
+    while (r >= 0 && r < 15 && c >= 0 && c < 15 && board[r][c] === color) {
+      line.push({ row: r, col: c });
+      r -= dr;
+      c -= dc;
+    }
+
+    if (line.length >= 5) {
+      return { win: true, line };
+    }
+  }
+  return { win: false, line: null };
+}
+
+function broadcastGomokuState(roomId) {
+  const room = gomokuRooms[roomId];
+  if (!room) return;
+
+  io.to(roomId).emit('gomoku_state', {
+    roomId: room.id,
+    players: room.players.map(p => ({
+      socketId: p.socketId,
+      name: p.name,
+      avatar: p.avatar,
+      color: p.color,
+      isReady: !!p.isReady,
+      score: p.score || 0
+    })),
+    board: room.board,
+    currentTurn: room.currentTurn,
+    status: room.status,
+    scores: room.scores,
+    lastMove: room.lastMove,
+    winner: room.winner,
+    winnerName: room.winnerName,
+    winningLine: room.winningLine
+  });
+}
+
+// 房间状态数据 (你画我猜)
 const rooms = {};
 
 // 广播房间人员与状态信息
@@ -581,9 +649,289 @@ io.on('connection', (socket) => {
     }
   });
 
+  // ==================== 五子棋 Socket 交互 ====================
+  let userGomokuRoom = null;
+  let userGomokuName = null;
+  let userGomokuAvatar = null;
+
+  socket.on('gomoku_join', ({ room, name, avatar }) => {
+    userGomokuRoom = (room || 'sweet520').trim();
+    userGomokuName = (name || '对弈高手').trim();
+    userGomokuAvatar = avatar || '🐱';
+
+    socket.join(userGomokuRoom);
+
+    if (!gomokuRooms[userGomokuRoom]) {
+      gomokuRooms[userGomokuRoom] = {
+        id: userGomokuRoom,
+        players: [],
+        board: Array(15).fill(null).map(() => Array(15).fill(0)),
+        currentTurn: 'black',
+        status: 'waiting', // 'waiting' | 'playing' | 'ended'
+        history: [],
+        lastMove: null,
+        scores: { black: 0, white: 0 },
+        winner: null,
+        winnerName: null,
+        winningLine: null
+      };
+    }
+
+    const gRoom = gomokuRooms[userGomokuRoom];
+    const existingIndex = gRoom.players.findIndex(p => p.name === userGomokuName);
+
+    if (existingIndex !== -1) {
+      gRoom.players[existingIndex].socketId = socket.id;
+      gRoom.players[existingIndex].avatar = userGomokuAvatar;
+      console.log(`[五子棋 ${userGomokuRoom}] 玩家重连: ${userGomokuName}`);
+    } else {
+      let assignedColor = 'black';
+      if (gRoom.players.length === 1) {
+        assignedColor = (gRoom.players[0].color === 'black' ? 'white' : 'black');
+      } else if (gRoom.players.length >= 2) {
+        assignedColor = 'spectator';
+      }
+
+      const newPlayer = {
+        socketId: socket.id,
+        name: userGomokuName,
+        avatar: userGomokuAvatar,
+        color: assignedColor,
+        isReady: false,
+        score: 0
+      };
+
+      if (gRoom.players.length >= 2) {
+        gRoom.players[1] = newPlayer;
+      } else {
+        gRoom.players.push(newPlayer);
+      }
+    }
+
+    broadcastGomokuState(userGomokuRoom);
+  });
+
+  socket.on('gomoku_ready', () => {
+    if (!userGomokuRoom || !gomokuRooms[userGomokuRoom]) return;
+    const gRoom = gomokuRooms[userGomokuRoom];
+    const player = gRoom.players.find(p => p.socketId === socket.id);
+    if (!player || player.color === 'spectator') return;
+
+    player.isReady = !player.isReady;
+
+    if (gRoom.players.length >= 2 && gRoom.players[0].isReady && gRoom.players[1].isReady) {
+      gRoom.board = Array(15).fill(null).map(() => Array(15).fill(0));
+      gRoom.history = [];
+      gRoom.lastMove = null;
+      gRoom.winner = null;
+      gRoom.winnerName = null;
+      gRoom.winningLine = null;
+      gRoom.currentTurn = 'black';
+      gRoom.status = 'playing';
+
+      io.to(userGomokuRoom).emit('gomoku_game_start', {
+        currentTurn: gRoom.currentTurn,
+        players: gRoom.players
+      });
+    }
+
+    broadcastGomokuState(userGomokuRoom);
+  });
+
+  socket.on('gomoku_move', ({ row, col }) => {
+    if (!userGomokuRoom || !gomokuRooms[userGomokuRoom]) return;
+    const gRoom = gomokuRooms[userGomokuRoom];
+    if (gRoom.status !== 'playing') return;
+
+    const player = gRoom.players.find(p => p.socketId === socket.id);
+    if (!player || player.color !== gRoom.currentTurn) return;
+
+    if (row < 0 || row >= 15 || col < 0 || col >= 15) return;
+    if (gRoom.board[row][col] !== 0) return;
+
+    const colorCode = (gRoom.currentTurn === 'black' ? 1 : 2);
+    gRoom.board[row][col] = colorCode;
+
+    const moveRecord = { row, col, color: gRoom.currentTurn, player: player.name };
+    gRoom.history.push(moveRecord);
+    gRoom.lastMove = moveRecord;
+
+    // 判定胜利
+    const winResult = checkGomokuWin(gRoom.board, row, col, colorCode);
+    if (winResult.win) {
+      gRoom.status = 'ended';
+      gRoom.winner = gRoom.currentTurn;
+      gRoom.winnerName = player.name;
+      gRoom.winningLine = winResult.line;
+      gRoom.scores[gRoom.currentTurn]++;
+      player.score++;
+
+      gRoom.players.forEach(p => p.isReady = false);
+
+      io.to(userGomokuRoom).emit('gomoku_game_over', {
+        winner: gRoom.winner,
+        winnerName: gRoom.winnerName,
+        winningLine: gRoom.winningLine,
+        scores: gRoom.scores,
+        board: gRoom.board,
+        lastMove: gRoom.lastMove
+      });
+      broadcastGomokuState(userGomokuRoom);
+      return;
+    }
+
+    // 棋盘已满判定平局
+    if (gRoom.history.length >= 225) {
+      gRoom.status = 'ended';
+      gRoom.winner = 'draw';
+      gRoom.winningLine = null;
+      gRoom.players.forEach(p => p.isReady = false);
+
+      io.to(userGomokuRoom).emit('gomoku_game_over', {
+        winner: 'draw',
+        scores: gRoom.scores,
+        board: gRoom.board,
+        lastMove: gRoom.lastMove
+      });
+      broadcastGomokuState(userGomokuRoom);
+      return;
+    }
+
+    // 切换回合
+    gRoom.currentTurn = (gRoom.currentTurn === 'black' ? 'white' : 'black');
+    io.to(userGomokuRoom).emit('gomoku_move_made', {
+      row,
+      col,
+      color: moveRecord.color,
+      nextTurn: gRoom.currentTurn,
+      lastMove: gRoom.lastMove
+    });
+    broadcastGomokuState(userGomokuRoom);
+  });
+
+  socket.on('gomoku_undo_request', () => {
+    if (!userGomokuRoom || !gomokuRooms[userGomokuRoom]) return;
+    const gRoom = gomokuRooms[userGomokuRoom];
+    if (gRoom.status !== 'playing' || gRoom.history.length === 0) return;
+
+    const player = gRoom.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+
+    const opponent = gRoom.players.find(p => p.socketId !== socket.id);
+    if (!opponent) return;
+
+    io.to(opponent.socketId).emit('gomoku_undo_prompt', {
+      requester: player.name
+    });
+  });
+
+  socket.on('gomoku_undo_response', ({ accepted }) => {
+    if (!userGomokuRoom || !gomokuRooms[userGomokuRoom]) return;
+    const gRoom = gomokuRooms[userGomokuRoom];
+    if (gRoom.status !== 'playing' || gRoom.history.length === 0) return;
+
+    const requester = gRoom.players.find(p => p.socketId !== socket.id);
+    if (!requester) return;
+
+    if (accepted) {
+      if (gRoom.history.length > 0) {
+        const last = gRoom.history.pop();
+        gRoom.board[last.row][last.col] = 0;
+
+        if (gRoom.currentTurn === requester.color && gRoom.history.length > 0) {
+          const prev = gRoom.history.pop();
+          gRoom.board[prev.row][prev.col] = 0;
+        }
+
+        gRoom.currentTurn = requester.color;
+        gRoom.lastMove = gRoom.history[gRoom.history.length - 1] || null;
+
+        io.to(userGomokuRoom).emit('gomoku_undo_success', {
+          board: gRoom.board,
+          history: gRoom.history,
+          currentTurn: gRoom.currentTurn,
+          lastMove: gRoom.lastMove,
+          msg: `🤝 对方同意了 ${requester.name} 的悔棋请求！`
+        });
+        broadcastGomokuState(userGomokuRoom);
+      }
+    } else {
+      io.to(requester.socketId).emit('gomoku_undo_rejected', {
+        msg: `对方没有同意悔棋哦～`
+      });
+    }
+  });
+
+  socket.on('gomoku_surrender', () => {
+    if (!userGomokuRoom || !gomokuRooms[userGomokuRoom]) return;
+    const gRoom = gomokuRooms[userGomokuRoom];
+    if (gRoom.status !== 'playing') return;
+
+    const player = gRoom.players.find(p => p.socketId === socket.id);
+    if (!player) return;
+    const opponent = gRoom.players.find(p => p.socketId !== socket.id);
+    if (!opponent) return;
+
+    gRoom.status = 'ended';
+    gRoom.winner = opponent.color;
+    gRoom.winnerName = opponent.name;
+    gRoom.winningLine = null;
+    gRoom.scores[opponent.color]++;
+    opponent.score++;
+    gRoom.players.forEach(p => p.isReady = false);
+
+    io.to(userGomokuRoom).emit('gomoku_game_over', {
+      winner: gRoom.winner,
+      winnerName: gRoom.winnerName,
+      surrenderedBy: player.name,
+      scores: gRoom.scores,
+      board: gRoom.board,
+      lastMove: gRoom.lastMove
+    });
+    broadcastGomokuState(userGomokuRoom);
+  });
+
+  socket.on('gomoku_restart', () => {
+    if (!userGomokuRoom || !gomokuRooms[userGomokuRoom]) return;
+    const gRoom = gomokuRooms[userGomokuRoom];
+    
+    // 交换执黑执白
+    if (gRoom.players.length >= 2) {
+      const c0 = gRoom.players[0].color;
+      gRoom.players[0].color = gRoom.players[1].color;
+      gRoom.players[1].color = c0;
+    }
+
+    gRoom.board = Array(15).fill(null).map(() => Array(15).fill(0));
+    gRoom.history = [];
+    gRoom.lastMove = null;
+    gRoom.winner = null;
+    gRoom.winnerName = null;
+    gRoom.winningLine = null;
+    gRoom.currentTurn = 'black';
+    gRoom.status = 'playing';
+    gRoom.players.forEach(p => p.isReady = true);
+
+    io.to(userGomokuRoom).emit('gomoku_game_start', {
+      currentTurn: gRoom.currentTurn,
+      players: gRoom.players,
+      msg: '🔄 棋局已重置，双方已交换黑白子！'
+    });
+    broadcastGomokuState(userGomokuRoom);
+  });
+
+  socket.on('gomoku_spin_punishment', (data) => {
+    if (!userGomokuRoom) return;
+    io.to(userGomokuRoom).emit('gomoku_punishment_result', {
+      targetIndex: data.targetIndex,
+      punishment: data.punishment,
+      spinner: userGomokuName
+    });
+  });
+
   // 断开连接
   socket.on('disconnect', () => {
-    console.log(`玩家离开: ${userName || socket.id}`);
+    console.log(`玩家离开: ${userName || userGomokuName || socket.id}`);
     if (userRoom && rooms[userRoom]) {
       const room = rooms[userRoom];
       room.players = room.players.filter(p => p.socketId !== socket.id);
@@ -598,6 +946,15 @@ io.on('connection', (socket) => {
 
       if (room.players.length === 0) {
         delete rooms[userRoom];
+      }
+    }
+
+    if (userGomokuRoom && gomokuRooms[userGomokuRoom]) {
+      const gRoom = gomokuRooms[userGomokuRoom];
+      gRoom.players = gRoom.players.filter(p => p.socketId !== socket.id);
+      broadcastGomokuState(userGomokuRoom);
+      if (gRoom.players.length === 0) {
+        delete gomokuRooms[userGomokuRoom];
       }
     }
   });

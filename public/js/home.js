@@ -26,12 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
 function initRoomNavigation() {
   const quickEnterBtn = document.getElementById('quickEnterBtn');
   const customRoomBtn = document.getElementById('customRoomBtn');
+  const quickGomokuBtn = document.getElementById('quickGomokuBtn');
+  const customGomokuBtn = document.getElementById('customGomokuBtn');
+
   const roomModal = document.getElementById('roomModal');
   const roomInput = document.getElementById('roomInput');
   const enterRoomConfirmBtn = document.getElementById('enterRoomConfirmBtn');
   const cancelRoomBtn = document.getElementById('cancelRoomBtn');
 
-  // 一键进入默认房间
+  let activeGameTarget = 'game'; // 'game' | 'gomoku'
+
+  // 你画我猜
   if (quickEnterBtn) {
     quickEnterBtn.addEventListener('click', (e) => {
       e.preventDefault();
@@ -39,15 +44,35 @@ function initRoomNavigation() {
     });
   }
 
-  // 自定义房间弹窗
-  if (customRoomBtn && roomModal) {
+  if (customRoomBtn) {
     customRoomBtn.addEventListener('click', (e) => {
       e.stopPropagation();
+      activeGameTarget = 'game';
       roomInput.value = '';
       roomModal.style.display = 'flex';
       setTimeout(() => roomInput.focus(), 150);
     });
+  }
 
+  // 五子棋
+  if (quickGomokuBtn) {
+    quickGomokuBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.location.href = '/gomoku.html?room=sweet520';
+    });
+  }
+
+  if (customGomokuBtn) {
+    customGomokuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      activeGameTarget = 'gomoku';
+      roomInput.value = '';
+      roomModal.style.display = 'flex';
+      setTimeout(() => roomInput.focus(), 150);
+    });
+  }
+
+  if (roomModal) {
     cancelRoomBtn.addEventListener('click', () => {
       roomModal.style.display = 'none';
     });
@@ -58,7 +83,8 @@ function initRoomNavigation() {
         alert('请输入房间名哦~');
         return;
       }
-      window.location.href = `/game.html?room=${encodeURIComponent(room)}`;
+      const targetPage = (activeGameTarget === 'gomoku' ? '/gomoku.html' : '/game.html');
+      window.location.href = `${targetPage}?room=${encodeURIComponent(room)}`;
     });
 
     roomInput.addEventListener('keydown', (e) => {
