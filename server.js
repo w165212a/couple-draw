@@ -125,8 +125,67 @@ function broadcastRoomInfo(roomId) {
     playerCount: room.players.length,
     state: room.state,
     gameStarted: !!room.gameStarted,
+    isPaused: !!room.isPaused,
     currentDrawerIndex: room.currentDrawerIndex
   });
+}
+
+// 启动或恢复游戏倒计时
+function startOrResumeGameTimer(roomId) {
+  const room = rooms[roomId];
+  if (!room || room.state !== 'playing' || !room.currentWordObj) return;
+
+  if (room.timerInterval) clearInterval(room.timerInterval);
+
+  room.timerInterval = setInterval(() => {
+    room.timerSeconds--;
+    io.to(roomId).emit('timer_tick', { seconds: room.timerSeconds });
+
+    // 剩余 60 秒触发第一提示
+    if (room.timerSeconds === 60 && !room.hint1Revealed) {
+      room.hint1Revealed = true;
+      io.to(roomId).emit('progressive_hint', {
+        level: 1,
+        hint: room.currentWordObj.hint1,
+        msg: `💡 进阶提示 ①：【${room.currentWordObj.hint1}】`
+      });
+    }
+
+    // 剩余 30 秒触发第二提示
+    if (room.timerSeconds === 30 && !room.hint2Revealed) {
+      room.hint2Revealed = true;
+      io.to(roomId).emit('progressive_hint', {
+        level: 2,
+        hint: room.currentWordObj.hint2,
+        msg: `💡 进阶提示 ②：【${room.currentWordObj.hint2}】`
+      });
+    }
+
+    // 倒计时结束，无人猜中
+    if (room.timerSeconds <= 0) {
+      clearInterval(room.timerInterval);
+      room.timerInterval = null;
+      room.state = 'round_end';
+      room.isPaused = false;
+
+      const drawer = room.players[room.currentDrawerIndex];
+      io.to(roomId).emit('round_timeout', {
+        word: room.currentWordObj.word,
+        hint1: room.currentWordObj.hint1,
+        hint2: room.currentWordObj.hint2,
+        drawerName: drawer ? drawer.name : '画手'
+      });
+
+      broadcastRoomInfo(roomId);
+
+      setTimeout(() => {
+        if (rooms[roomId] && rooms[roomId].players.length >= 2) {
+          resolveNextDrawer(roomId);
+          startWordSelectionPhase(roomId);
+        }
+      }, 6500);
+    }
+  }, 1000);
 }
 
 io.on('connection', (socket) => {
@@ -150,6 +209,7 @@ io.on('connection', (socket) => {
         candidateWords: [],
         state: 'lobby', // 'lobby' | 'selecting_word' | 'playing' | 'round_end'
         gameStarted: false,
+        isPaused: false,
         timerSeconds: 90,
         timerInterval: null,
         hint1Revealed: false,
@@ -163,7 +223,7 @@ io.on('connection', (socket) => {
 
     const currentRoom = rooms[userRoom];
 
-    // 检查是否已有同名玩家重连，并无缝更新其 socketId
+    // 检查是否已有同名玩家重连
     const existingIndex = currentRoom.players.findIndex(p => p.name === userName);
     if (existingIndex !== -1) {
       currentRoom.players[existingIndex].socketId = socket.id;
@@ -187,7 +247,7 @@ io.on('connection', (socket) => {
 
     broadcastRoomInfo(userRoom);
 
-    // 如果中途重连，立即补发当前画板完整历史以防止画面丢失
+    // 如果中途重连，立即补发当前画板完整历史
     if (currentRoom.state === 'playing') {
       socket.emit('sync_canvas', currentRoom.drawHistory);
       const isDrawer = currentRoom.players[currentRoom.currentDrawerIndex]?.name === userName;
@@ -199,13 +259,14 @@ io.on('connection', (socket) => {
           hint1: currentRoom.hint1Revealed ? currentRoom.currentWordObj.hint1 : null,
           hint2: currentRoom.hint2Revealed ? currentRoom.currentWordObj.hint2 : null,
           drawerName: currentRoom.players[currentRoom.currentDrawerIndex]?.name,
-          remainingSeconds: currentRoom.timerSeconds
+          remainingSeconds: currentRoom.timerSeconds,
+          isPaused: currentRoom.isPaused
         });
       }
     }
   });
 
-  // 玩家准备 / 取消准备 (首次进入房间时使用)
+  // 玩家准备 / 取消准备
   socket.on('toggle_ready', () => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
@@ -223,7 +284,31 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 下一局角色意向选择 (Req 3: 玩家自由选猜还是画)
+  // 暂停 / 恢复游戏功能（开启双人涂鸦模式）
+  socket.on('toggle_pause', () => {
+    if (!userRoom || !rooms[userRoom]) return;
+    const room = rooms[userRoom];
+    if (room.state !== 'playing') return;
+
+    room.isPaused = !room.isPaused;
+    console.log(`[${userRoom}] 玩家 ${userName} 切换暂停状态: ${room.isPaused ? '已暂停(双人涂鸦)' : '继续游戏'}`);
+
+    if (room.isPaused) {
+      if (room.timerInterval) {
+        clearInterval(room.timerInterval);
+        room.timerInterval = null;
+      }
+    } else {
+      startOrResumeGameTimer(userRoom);
+    }
+
+    io.to(userRoom).emit('pause_status_changed', {
+      isPaused: room.isPaused,
+      operator: userName
+    });
+  });
+
+  // 下一局角色意向选择
   socket.on('set_role_preference', ({ role }) => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
@@ -244,6 +329,7 @@ io.on('connection', (socket) => {
     if (room.wordPickInterval) clearInterval(room.wordPickInterval);
 
     room.state = 'selecting_word';
+    room.isPaused = false;
     room.candidateWords = getCandidateWords(4);
     room.wordPickSeconds = 15;
     room.hint1Revealed = false;
@@ -254,13 +340,11 @@ io.on('connection', (socket) => {
 
     console.log(`[${roomId}] 画手 ${drawer.name} 挑选词汇，备选:`, room.candidateWords.map(c => c.word));
 
-    // 通知画手
     io.to(drawer.socketId).emit('pick_word_turn', {
       candidates: room.candidateWords,
       duration: room.wordPickSeconds
     });
 
-    // 通知猜题人
     io.to(guesser.socketId).emit('guesser_waiting_pick', {
       drawerName: drawer.name,
       drawerAvatar: drawer.avatar,
@@ -269,7 +353,6 @@ io.on('connection', (socket) => {
 
     broadcastRoomInfo(roomId);
 
-    // 15 秒选词倒计时
     room.wordPickInterval = setInterval(() => {
       room.wordPickSeconds--;
       io.to(roomId).emit('word_pick_tick', { seconds: room.wordPickSeconds });
@@ -283,7 +366,7 @@ io.on('connection', (socket) => {
     }, 1000);
   }
 
-  // 画手刷新候选词（从 500 词库中换一批）
+  // 画手刷新候选词（换一批）
   socket.on('refresh_candidates', () => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
@@ -318,13 +401,14 @@ io.on('connection', (socket) => {
     startDrawingPhase(userRoom, { word, hint1, hint2 });
   });
 
-  // 正式进入作画与猜题阶段（双重进阶提示）
+  // 正式进入作画与猜题阶段
   function startDrawingPhase(roomId, wordObj) {
     const room = rooms[roomId];
     if (!room || room.players.length < 2) return;
 
     room.currentWordObj = wordObj;
     room.state = 'playing';
+    room.isPaused = false;
     room.drawHistory = [];
     room.timerSeconds = 90;
     room.roundStartTime = Date.now();
@@ -356,57 +440,10 @@ io.on('connection', (socket) => {
 
     broadcastRoomInfo(roomId);
 
-    // 倒计时与阶梯提示
-    room.timerInterval = setInterval(() => {
-      room.timerSeconds--;
-      io.to(roomId).emit('timer_tick', { seconds: room.timerSeconds });
-
-      // 剩余 60 秒触发第一提示
-      if (room.timerSeconds === 60 && !room.hint1Revealed) {
-        room.hint1Revealed = true;
-        io.to(roomId).emit('progressive_hint', {
-          level: 1,
-          hint: wordObj.hint1,
-          msg: `💡 进阶提示 ①：【${wordObj.hint1}】`
-        });
-      }
-
-      // 剩余 30 秒触发第二提示
-      if (room.timerSeconds === 30 && !room.hint2Revealed) {
-        room.hint2Revealed = true;
-        io.to(roomId).emit('progressive_hint', {
-          level: 2,
-          hint: wordObj.hint2,
-          msg: `💡 进阶提示 ②：【${wordObj.hint2}】`
-        });
-      }
-
-      // 倒计时结束，无人猜中
-      if (room.timerSeconds <= 0) {
-        clearInterval(room.timerInterval);
-        room.state = 'round_end';
-
-        io.to(roomId).emit('round_timeout', {
-          word: wordObj.word,
-          hint1: wordObj.hint1,
-          hint2: wordObj.hint2,
-          drawerName: drawer.name
-        });
-
-        broadcastRoomInfo(roomId);
-
-        // 6秒展示结束后，根据玩家意向决定下一局画手
-        setTimeout(() => {
-          if (rooms[roomId] && rooms[roomId].players.length >= 2) {
-            resolveNextDrawer(roomId);
-            startWordSelectionPhase(roomId);
-          }
-        }, 6500);
-      }
-    }, 1000);
+    startOrResumeGameTimer(roomId);
   }
 
-  // 仲裁下一局画手（满足玩家自主选择）
+  // 仲裁下一局画手
   function resolveNextDrawer(roomId) {
     const room = rooms[roomId];
     if (!room || room.players.length < 2) return;
@@ -425,21 +462,31 @@ io.on('connection', (socket) => {
     } else if (pref1 === 'guesser' && pref0 !== 'guesser') {
       room.currentDrawerIndex = 0;
     } else {
-      // 两人意向冲突或均未做选择，保持公平轮换
       room.currentDrawerIndex = 1 - room.currentDrawerIndex;
     }
 
-    // 重置意向
-    p0.preferredRole = null;
-    p1.preferredRole = null;
+    if (p0) p0.preferredRole = null;
+    if (p1) p1.preferredRole = null;
   }
 
-  // 绘图同步（高容错：只要名字匹配画手即允许广播，防止重连后短暂 socketId 校验偏差）
+  // 绘图同步：在暂停状态下开启【双人涂鸦】，任何一方均可画画！
   socket.on('draw_action', (data) => {
     if (!userRoom || !rooms[userRoom]) return;
     const room = rooms[userRoom];
     if (room.state !== 'playing') return;
-    
+
+    // 暂停状态下开启双人涂鸦模式：双方皆可作画并同步！
+    if (room.isPaused) {
+      if (data.type === 'clear') {
+        room.drawHistory = [];
+      } else {
+        room.drawHistory.push(data);
+      }
+      socket.to(userRoom).emit('draw_action', data);
+      return;
+    }
+
+    // 正常游戏时：仅当前画手可以绘图
     const currentDrawer = room.players[room.currentDrawerIndex];
     if (!currentDrawer || currentDrawer.name !== userName) return;
 
@@ -465,8 +512,11 @@ io.on('connection', (socket) => {
     const isGuesser = currentGuesser && currentGuesser.name === userName;
 
     if (isGuesser && guessText.toLowerCase() === room.currentWordObj.word.toLowerCase()) {
-      clearInterval(room.timerInterval);
+      if (room.timerInterval) clearInterval(room.timerInterval);
+      room.timerInterval = null;
       room.state = 'round_end';
+      room.isPaused = false;
+
       const elapsedSeconds = Math.max(1, Math.floor((Date.now() - room.roundStartTime) / 1000));
 
       currentGuesser.score = (currentGuesser.score || 0) + 3;
@@ -487,7 +537,6 @@ io.on('connection', (socket) => {
 
       broadcastRoomInfo(userRoom);
 
-      // 6.5秒展示回忆卡并等待玩家意向选择后，进入下一局
       setTimeout(() => {
         if (rooms[userRoom] && rooms[userRoom].players.length >= 2) {
           resolveNextDrawer(userRoom);
@@ -538,6 +587,7 @@ io.on('connection', (socket) => {
       if (room.wordPickInterval) clearInterval(room.wordPickInterval);
       room.state = 'lobby';
       room.gameStarted = false;
+      room.isPaused = false;
 
       broadcastRoomInfo(userRoom);
 

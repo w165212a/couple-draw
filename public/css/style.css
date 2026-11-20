@@ -257,6 +257,39 @@ html, body {
   border-radius: 6px;
 }
 
+/* 暂停/双人涂鸦模式按钮 */
+.pause-toggle-btn {
+  background: var(--soft-pink);
+  color: var(--primary-pink);
+  border: 1px solid rgba(255, 107, 129, 0.4);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  transition: all 0.15s ease;
+}
+
+.pause-toggle-btn:active {
+  transform: scale(0.94);
+}
+
+.pause-toggle-btn.paused {
+  background: #2ED573;
+  color: #FFF;
+  border-color: #2ED573;
+  animation: pulsePause 1.5s infinite;
+}
+
+@keyframes pulsePause {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0.4); }
+  50% { transform: scale(1.05); box-shadow: 0 0 0 4px rgba(46, 213, 115, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(46, 213, 115, 0); }
+}
+
 .timer-box {
   font-size: 14px;
   font-weight: 700;
@@ -624,6 +657,7 @@ html, body {
   flex-direction: column;
   gap: 12px;
   animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
 }
 
 @keyframes popIn {
@@ -821,6 +855,19 @@ html, body {
   max-width: 380px;
   background: #FFFAF5;
   border: 2px solid #F5E6D3;
+  position: relative;
+}
+
+.close-card-btn {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
 }
 
 .polaroid-header {
@@ -856,7 +903,7 @@ html, body {
   font-weight: 500;
 }
 
-/* 下一局角色自主选择卡片 (Req 3) */
+/* 下一局角色自主选择卡片 */
 .role-choice-card {
   background: #FFF5F7;
   border: 1.5px solid #FFD3DC;
@@ -917,7 +964,7 @@ html, body {
   font-weight: bold;
 }
 
-/* 恋爱画册弹窗样式 (永久保存) */
+/* 恋爱画册弹窗样式 */
 .gallery-modal-card {
   max-width: 440px;
   max-height: 85vh;
@@ -1007,4 +1054,65 @@ html, body {
   cursor: pointer;
   padding: 6px;
   text-decoration: underline;
+}
+
+/* 画册专属大图预览弹窗 (解决查看大图无法返回的问题) */
+.preview-modal-card {
+  max-width: 400px;
+  background: #FFFDF9;
+  border: 2px solid #F0E5D8;
+  padding: 16px 14px;
+}
+
+.preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.back-pill-btn {
+  background: #F1F2F6;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.back-pill-btn:active {
+  background: #E4E7EB;
+  transform: scale(0.95);
+}
+
+.preview-title {
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--primary-pink);
+}
+
+.preview-img-wrapper {
+  background: #FFF;
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  border: 1px solid #ECE2D5;
+  margin: 4px 0;
+}
+
+.preview-img-wrapper img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+.preview-tip {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 2px;
 }

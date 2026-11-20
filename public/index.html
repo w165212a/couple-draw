@@ -40,6 +40,10 @@
       <div class="banner-top-row">
         <div class="badge-group">
           <span class="role-badge" id="roleBadge">等待准备</span>
+          <!-- 暂停功能按钮 (双人自由涂鸦) -->
+          <button class="pause-toggle-btn" id="pauseBtn" title="暂停游戏/双人涂鸦" style="display: none;">
+            ⏸️ 暂停
+          </button>
         </div>
         <div class="timer-box" id="timerBox">
           <span id="timerText">--</span>s
@@ -63,7 +67,7 @@
         <div class="reaction-layer" id="reactionLayer"></div>
       </div>
 
-      <!-- 画笔工具栏（仅画手可见） -->
+      <!-- 画笔工具栏 -->
       <div class="tools-bar" id="toolsBar">
         <div class="color-palette">
           <button class="color-dot active" data-color="#2d3436" style="background: #2d3436;"></button>
@@ -148,12 +152,10 @@
         </div>
         <p class="select-hint">点击卡片选定（下方附带对方会收到的进阶线索）：</p>
 
-        <!-- 4 选 1 候选词网格 -->
         <div class="candidate-words-grid" id="candidateWordsGrid">
           <!-- 动态生成 4 张卡片 -->
         </div>
 
-        <!-- 换一批按钮 -->
         <button class="refresh-words-btn" id="refreshWordsBtn">
           🔄 都不满意？换一批新词 (再来4个)
         </button>
@@ -183,9 +185,10 @@
       </div>
     </div>
 
-    <!-- 5. 猜中胜利：拍立得画作回忆卡弹窗（附带自主选择下一局画还是猜） -->
+    <!-- 5. 猜中胜利：拍立得画作回忆卡弹窗 -->
     <div class="modal-overlay" id="victoryModal" style="display: none;">
       <div class="modal-card polaroid-card">
+        <button class="close-card-btn" id="closeVictoryBtn" title="关闭弹窗">✕</button>
         <div class="polaroid-header">
           <span class="heart-icon">💖</span>
           <h4>心有灵犀！猜中啦！</h4>
@@ -197,7 +200,7 @@
 
         <p class="polaroid-tip">📱 手机端长按上方图片即可保存到相册</p>
 
-        <!-- Req 3: 自主选择下一局画还是猜 -->
+        <!-- 自主选择下一局画还是猜 -->
         <div class="role-choice-card" id="roleChoiceCard">
           <div class="choice-title">下局想当什么？（可自由挑选）</div>
           <div class="choice-buttons">
@@ -213,20 +216,36 @@
       </div>
     </div>
 
-    <!-- 6. 恋爱画册弹窗 (保存的历史画作瀑布流) -->
+    <!-- 6. 恋爱画册弹窗 (历史画作瀑布流) -->
     <div class="modal-overlay" id="galleryModal" style="display: none;">
       <div class="modal-card gallery-modal-card">
         <div class="gallery-header">
           <h3>📖 我们的恋爱画册</h3>
           <button class="close-gallery-btn" id="closeGalleryBtn">✕</button>
         </div>
-        <p class="gallery-tip">手机本地永久保存，随时翻看我们的小默契~</p>
+        <p class="gallery-tip">手机本地永久保存，点击卡片可查看大图详情并返回~</p>
 
         <div class="gallery-grid" id="galleryGrid">
           <!-- 动态加载历史画作图片 -->
         </div>
 
         <button class="clear-gallery-btn" id="clearGalleryBtn" style="display: none;">清空本地画册</button>
+      </div>
+    </div>
+
+    <!-- 7. 画册专属大图预览弹窗 (解决查看大图无法返回的问题) -->
+    <div class="modal-overlay" id="imagePreviewModal" style="display: none;">
+      <div class="modal-card preview-modal-card">
+        <div class="preview-header">
+          <button class="back-pill-btn" id="closePreviewBtn">← 返回画册</button>
+          <span class="preview-title" id="previewTitle">画作详情</span>
+        </div>
+        
+        <div class="preview-img-wrapper">
+          <img id="previewModalImage" src="" alt="大图详情">
+        </div>
+
+        <p class="preview-tip">📱 手机端长按图片可直接保存到相册</p>
       </div>
     </div>
 

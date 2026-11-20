@@ -13,8 +13,9 @@ const openGalleryBtn = document.getElementById('openGalleryBtn');
 const playersChipsContainer = document.getElementById('playersChipsContainer');
 const readyActionBtn = document.getElementById('readyActionBtn');
 
-// 题目与横幅
+// 题目、横幅与暂停
 const roleBadge = document.getElementById('roleBadge');
+const pauseBtn = document.getElementById('pauseBtn');
 const topicWord = document.getElementById('topicWord');
 const timerText = document.getElementById('timerText');
 const hintContainer = document.getElementById('hintContainer');
@@ -64,14 +65,21 @@ const nextRoundTimer = document.getElementById('nextRoundTimer');
 const chooseDrawerBtn = document.getElementById('chooseDrawerBtn');
 const chooseGuesserBtn = document.getElementById('chooseGuesserBtn');
 const myChoiceStatus = document.getElementById('myChoiceStatus');
+const closeVictoryBtn = document.getElementById('closeVictoryBtn');
 
 const galleryModal = document.getElementById('galleryModal');
 const galleryGrid = document.getElementById('galleryGrid');
 const closeGalleryBtn = document.getElementById('closeGalleryBtn');
 const clearGalleryBtn = document.getElementById('clearGalleryBtn');
 
+const imagePreviewModal = document.getElementById('imagePreviewModal');
+const previewModalImage = document.getElementById('previewModalImage');
+const previewTitle = document.getElementById('previewTitle');
+const closePreviewBtn = document.getElementById('closePreviewBtn');
+
 // 状态变量
 let isDrawer = false;
+let isPaused = false;
 let isDrawing = false;
 let currentColor = '#2d3436';
 let currentSize = 3;
@@ -118,7 +126,7 @@ function initPlayerAndRoom() {
   }
 }
 
-// 自动重连高容错支持（解决锁屏或网络轻微抖动导致的画板失联）
+// 自动重连高容错支持
 socket.on('connect', () => {
   console.log('Socket 已连接:', socket.id);
   if (playerName) {
@@ -174,7 +182,36 @@ readyActionBtn.addEventListener('click', () => {
   socket.emit('toggle_ready');
 });
 
-// 3. 画手自主选词 (500 词库海量随机 4选1 + 换一批)
+// 3. 暂停 / 恢复游戏功能（双人自由涂鸦）
+pauseBtn.addEventListener('click', () => {
+  socket.emit('toggle_pause');
+});
+
+socket.on('pause_status_changed', (data) => {
+  isPaused = data.isPaused;
+  if (isPaused) {
+    pauseBtn.innerHTML = '▶️ 继续';
+    pauseBtn.classList.add('paused');
+    // 解锁双方画笔工具栏
+    toolsBar.classList.remove('disabled');
+    topicWord.innerText = '⏸️ 游戏已暂停：双人自由涂鸦开启 💕';
+    showToast(`⏸️ ${data.operator} 暂停了游戏，开启双人涂鸦！`);
+  } else {
+    pauseBtn.innerHTML = '⏸️ 暂停';
+    pauseBtn.classList.remove('paused');
+    if (isDrawer) {
+      topicWord.innerText = `请画: 【 ${currentWord} 】`;
+      toolsBar.classList.remove('disabled');
+    } else {
+      const blanks = Array(currentWord.length).fill(' _ ').join('');
+      topicWord.innerText = `题目(${currentWord.length}字): ${blanks}`;
+      toolsBar.classList.add('disabled');
+    }
+    showToast(`▶️ ${data.operator} 恢复了游戏！`);
+  }
+});
+
+// 4. 画手自主选词 (500 词库海量随机 4选1 + 换一批)
 function renderCandidateWords(candidates) {
   candidateWordsGrid.innerHTML = '';
   candidates.forEach(c => {
@@ -196,7 +233,7 @@ refreshWordsBtn.addEventListener('click', () => {
   socket.emit('refresh_candidates');
 });
 
-// 4. 画板高分屏适配与绘图同步（增加 Safari Pointer 安全捕获）
+// 5. 画板高分屏适配与绘图同步
 function setupCanvas() {
   const rect = canvasContainer.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -256,8 +293,9 @@ function getRelativeCoord(e) {
   };
 }
 
+// 触摸/鼠标/手写笔绘制：如果当前是画手，或者正处于暂停双人涂鸦模式，均可绘制！
 canvas.addEventListener('pointerdown', (e) => {
-  if (!isDrawer) return;
+  if (!isDrawer && !isPaused) return;
   e.preventDefault();
   isDrawing = true;
 
@@ -284,7 +322,7 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 
 canvas.addEventListener('pointermove', (e) => {
-  if (!isDrawer || !isDrawing) return;
+  if ((!isDrawer && !isPaused) || !isDrawing) return;
   e.preventDefault();
 
   const coord = getRelativeCoord(e);
@@ -344,7 +382,7 @@ eraserBtn.addEventListener('click', () => {
 });
 
 clearBtn.addEventListener('click', () => {
-  if (!isDrawer) return;
+  if (!isDrawer && !isPaused) return;
   if (confirm('确认清空当前画布吗？')) {
     const action = { type: 'clear' };
     executeDrawAction(action);
@@ -352,7 +390,7 @@ clearBtn.addEventListener('click', () => {
   }
 });
 
-// 5. 下一局角色意向选择 (Req 3)
+// 6. 下一局角色意向选择
 chooseDrawerBtn.addEventListener('click', () => {
   chooseDrawerBtn.classList.add('active');
   chooseGuesserBtn.classList.remove('active');
@@ -373,7 +411,12 @@ function resetRoleChoiceUI() {
   myChoiceStatus.innerText = '（双方未选或冲突时自动轮流互换）';
 }
 
-// 6. 猜词与消息互动
+closeVictoryBtn.addEventListener('click', () => {
+  victoryModal.style.display = 'none';
+  if (countdownInterval) clearInterval(countdownInterval);
+});
+
+// 7. 猜词与消息互动
 guessForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const text = guessInput.value.trim();
@@ -425,7 +468,7 @@ submitWordBtn.addEventListener('click', () => {
   wordModal.style.display = 'none';
 });
 
-// 7. 恋爱画册 (本地持久化存储，100% 独立于云端，永久不丢)
+// 8. 恋爱画册与大图预览（带返回画册功能）
 function saveCardToGallery(cardDataUrl, word, dateStr) {
   try {
     let gallery = JSON.parse(localStorage.getItem('couple_draw_gallery') || '[]');
@@ -434,11 +477,10 @@ function saveCardToGallery(cardDataUrl, word, dateStr) {
       word: word,
       date: dateStr
     });
-    // 本地最多保留 50 幅精品画作
     if (gallery.length > 50) gallery = gallery.slice(0, 50);
     localStorage.setItem('couple_draw_gallery', JSON.stringify(gallery));
   } catch (e) {
-    console.warn('本地相册存储超额或失败:', e);
+    console.warn('本地相册存储失败:', e);
   }
 }
 
@@ -462,16 +504,21 @@ function renderGallery() {
         <span class="gallery-item-title">“${escapeHtml(item.word)}”</span>
         <span class="gallery-item-date">${escapeHtml(item.date)}</span>
       `;
+      // 点击缩略图：打开专属大图预览弹窗（带一键返回画册按钮）
       cardEl.addEventListener('click', () => {
-        polaroidImage.src = item.img;
-        victoryModal.style.display = 'flex';
-        nextRoundTimer.innerHTML = '浏览相册画作中 (可长按保存)';
+        previewModalImage.src = item.img;
+        previewTitle.innerText = `“${item.word}”`;
+        imagePreviewModal.style.display = 'flex';
       });
       galleryGrid.appendChild(cardEl);
     });
   }
   galleryModal.style.display = 'flex';
 }
+
+closePreviewBtn.addEventListener('click', () => {
+  imagePreviewModal.style.display = 'none';
+});
 
 clearGalleryBtn.addEventListener('click', () => {
   if (confirm('确认清空你手机上的画册记录吗？（已保存至相册的图片不受影响）')) {
@@ -480,14 +527,13 @@ clearGalleryBtn.addEventListener('click', () => {
   }
 });
 
-// 8. 生成拍立得画作回忆卡
+// 9. 生成拍立得画作回忆卡
 function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, guesser, guesserAvatar, seconds) {
   const card = document.createElement('canvas');
   card.width = 640;
   card.height = 840;
   const c = card.getContext('2d');
 
-  // 相纸底色
   c.fillStyle = '#FFFDF9';
   c.fillRect(0, 0, card.width, card.height);
 
@@ -503,21 +549,17 @@ function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, gu
   c.lineWidth = 2;
   c.strokeRect(margin, margin, photoSize, photoSize);
 
-  // 画面内容
   c.drawImage(canvas, margin, margin, photoSize, photoSize);
 
-  // 题目
   c.fillStyle = '#2D3436';
   c.font = 'bold 36px -apple-system, sans-serif';
   c.fillText(`“${word}”`, margin, photoSize + margin + 55);
 
-  // 提示信息回顾
   c.fillStyle = '#FF6B81';
   c.font = 'bold 18px -apple-system, sans-serif';
   const hintSummary = hint1 ? `💡 线索：${hint1} · ${hint2 || ''}` : '💡 甜蜜默契考验';
   c.fillText(hintSummary, margin, photoSize + margin + 95);
 
-  // 画手与心有灵犀信息
   c.fillStyle = '#636E72';
   c.font = '22px -apple-system, sans-serif';
   c.fillText(`🎨 画手: ${drawerAvatar} ${drawer}  |  💡 猜中: ${guesserAvatar} ${guesser}`, margin, photoSize + margin + 135);
@@ -528,7 +570,6 @@ function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, gu
   c.fillStyle = '#B2BEC3';
   c.fillText(`⏱️ 耗时 ${seconds}秒 · ${dateStr}`, margin, photoSize + margin + 170);
 
-  // 甜蜜印章
   c.save();
   c.translate(card.width - margin - 150, card.height - margin - 45);
   c.rotate(-0.06);
@@ -543,7 +584,6 @@ function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, gu
   const dataUrl = card.toDataURL('image/png');
   polaroidImage.src = dataUrl;
 
-  // 存入手机永久恋爱画册 (Req 8)
   saveCardToGallery(dataUrl, word, dateStr);
 
   resetRoleChoiceUI();
@@ -563,7 +603,7 @@ function generatePolaroidMemoryCard(word, hint1, hint2, drawer, drawerAvatar, gu
   }, 1000);
 }
 
-// 9. Socket 监听服务
+// 10. Socket 监听服务
 
 socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
   isGameActive = !!gameStarted;
@@ -605,6 +645,7 @@ socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
     roleBadge.innerText = '等待中';
     topicWord.innerText = '等待对方点击专属链接进房';
     timerText.innerText = '--';
+    pauseBtn.style.display = 'none';
     hintContainer.style.display = 'none';
     readyActionBtn.disabled = true;
   } else {
@@ -618,18 +659,18 @@ socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
   }
 });
 
-// 画手端进入自主选词阶段 (4选1 + 换一批)
 socket.on('pick_word_turn', ({ candidates, duration }) => {
   guesserWaitingModal.style.display = 'none';
   wordSelectModal.style.display = 'flex';
+  pauseBtn.style.display = 'none';
   selectTimerBadge.innerText = `⏱️ ${duration}s`;
   renderCandidateWords(candidates);
 });
 
-// 猜题人等待画手选词
 socket.on('guesser_waiting_pick', ({ drawerName, drawerAvatar, duration }) => {
   wordSelectModal.style.display = 'none';
   guesserWaitingModal.style.display = 'flex';
+  pauseBtn.style.display = 'none';
   waitingDrawerAvatar.innerText = drawerAvatar || '🎨';
   waitingDrawerTitle.innerText = `画手 ${drawerName} 正在挑选题目...`;
   guesserWaitTimer.innerText = `⏱️ ${duration}s`;
@@ -640,7 +681,6 @@ socket.on('word_pick_tick', ({ seconds }) => {
   guesserWaitTimer.innerText = `⏱️ ${seconds}s`;
 });
 
-// 正式回合开始
 socket.on('round_start', (data) => {
   wordSelectModal.style.display = 'none';
   guesserWaitingModal.style.display = 'none';
@@ -648,12 +688,17 @@ socket.on('round_start', (data) => {
   if (countdownInterval) clearInterval(countdownInterval);
 
   isDrawer = data.isDrawer;
+  isPaused = false;
   drawHistory = [];
   setupCanvas();
 
   currentHint1 = data.hint1 || '';
   currentHint2 = data.hint2 || '';
 
+  // 显示暂停按钮与提示栏
+  pauseBtn.style.display = 'inline-flex';
+  pauseBtn.innerHTML = '⏸️ 暂停';
+  pauseBtn.classList.remove('paused');
   hintContainer.style.display = 'flex';
 
   if (isDrawer) {
@@ -685,7 +730,6 @@ socket.on('round_start', (data) => {
   }
 });
 
-// 进阶提示触发
 socket.on('progressive_hint', ({ level, hint, msg }) => {
   if (level === 1) {
     currentHint1 = hint;
@@ -723,14 +767,13 @@ socket.on('draw_action', (action) => {
   executeDrawAction(action);
 });
 
-// 补发全量画板历史（网络重连防卡死）
 socket.on('sync_canvas', (history) => {
-  console.log('同步全量画板数据:', history.length);
   drawHistory = history || [];
   redrawHistory();
 });
 
 socket.on('round_win', (data) => {
+  pauseBtn.style.display = 'none';
   addChatMessage('系统', `🎉 猜中啦！答案是【${data.word}】，耗时 ${data.elapsedSeconds} 秒！`, true);
   generatePolaroidMemoryCard(
     data.word, 
@@ -745,6 +788,7 @@ socket.on('round_win', (data) => {
 });
 
 socket.on('round_timeout', (data) => {
+  pauseBtn.style.display = 'none';
   addChatMessage('系统', `⏰ 时间到啦！正确答案是【${data.word}】`, false);
   showToast(`⏰ 时间到！答案是【${data.word}】`);
   resetRoleChoiceUI();
