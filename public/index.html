@@ -10,19 +10,26 @@
   <div id="app" class="app-container">
     <!-- 顶部状态栏 -->
     <header class="header">
-      <div class="room-pill" id="roomBtn" title="点击复制分享链接">
-        <span class="room-icon">🔗</span>
-        <span id="roomNameDisplay">房间: sweet520</span>
+      <div class="header-left-actions">
+        <!-- 返回首页按钮 -->
+        <a href="/" class="home-nav-btn" id="homeNavBtn" title="返回平台首页">
+          <span>🏠 首页</span>
+        </a>
+
+        <div class="room-pill" id="roomBtn" title="点击复制分享链接">
+          <span class="room-icon">🔗</span>
+          <span id="roomNameDisplay">sweet520</span>
+        </div>
       </div>
 
       <div class="header-right-actions">
         <!-- 恋爱画册按钮 (本地离线永久保存) -->
         <button class="gallery-pill-btn" id="openGalleryBtn" title="查看我们的画作回忆">
-          📖 恋爱画册
+          📖 画册
         </button>
 
         <button class="icon-btn" id="addWordBtn" title="投喂属于你们的专属词">
-          + 投喂新词
+          + 投词
         </button>
       </div>
     </header>

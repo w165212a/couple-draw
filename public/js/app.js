@@ -2,6 +2,7 @@
 const socket = io();
 
 // 元素引用
+const homeNavBtn = document.getElementById('homeNavBtn');
 const roomBtn = document.getElementById('roomBtn');
 const roomNameDisplay = document.getElementById('roomNameDisplay');
 const statusIndicator = document.getElementById('statusIndicator');
@@ -166,6 +167,20 @@ confirmNameBtn.addEventListener('click', () => {
 
 function joinGame() {
   socket.emit('join_room', { room: roomName, name: playerName, avatar: selectedAvatar });
+}
+
+if (homeNavBtn) {
+  homeNavBtn.addEventListener('click', (e) => {
+    if (isGameActive && !confirm('正在游戏中，确定要返回情侣小天地首页吗？')) {
+      e.preventDefault();
+      return;
+    }
+    // 尚未部署单独首页时给予温馨提示
+    if (location.pathname === '/' || location.pathname.endsWith('index.html')) {
+      e.preventDefault();
+      showToast('🏠 首页返回按钮已就绪！选定心仪设计方案后即可直达专属大厅～');
+    }
+  });
 }
 
 roomBtn.addEventListener('click', () => {
