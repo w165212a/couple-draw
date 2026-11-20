@@ -105,6 +105,11 @@ function getCandidateWords(count = 4, excludeWords = []) {
 // 静态文件服务
 app.use(express.static(path.join(__dirname, 'public')));
 
+// 路由兼容：支持 /game 直接访问你画我猜对局页面
+app.get('/game', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'game.html'));
+});
+
 // 房间状态数据
 const rooms = {};
 

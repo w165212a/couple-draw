@@ -3,262 +3,188 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>双人默契大作战 💕 你画我猜</title>
-  <link rel="stylesheet" href="css/style.css">
+  <title>🌸 我们的专属小世界 · 情侣互动大厅</title>
+  <link rel="stylesheet" href="/css/home.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
 </head>
 <body>
-  <div id="app" class="app-container">
-    <!-- 顶部状态栏 -->
-    <header class="header">
-      <div class="header-left-actions">
-        <!-- 返回首页按钮 -->
-        <a href="/" class="home-nav-btn" id="homeNavBtn" title="返回平台首页">
-          <span>🏠 首页</span>
-        </a>
+  <!-- 全屏水彩插画背景与轻柔漫反射光影 -->
+  <div class="bg-canvas-layer"></div>
+  <div class="bg-overlay-layer"></div>
 
-        <div class="room-pill" id="roomBtn" title="点击复制分享链接">
-          <span class="room-icon">🔗</span>
-          <span id="roomNameDisplay">sweet520</span>
-        </div>
+  <div class="home-container">
+    <!-- 顶部导航与品牌状态 -->
+    <header class="top-nav">
+      <div class="brand-badge">
+        <span class="brand-heart">💕</span>
+        <span class="brand-title">专属互动小世界</span>
       </div>
 
-      <div class="header-right-actions">
-        <!-- 恋爱画册按钮 (本地离线永久保存) -->
-        <button class="gallery-pill-btn" id="openGalleryBtn" title="查看我们的画作回忆">
-          📖 画册
-        </button>
-
-        <button class="icon-btn" id="addWordBtn" title="投喂属于你们的专属词">
-          + 投词
+      <div class="nav-actions">
+        <!-- 恋爱画册快捷直达 -->
+        <button class="nav-pill-btn" id="openLobbyGalleryBtn" title="查看我们的画作回忆">
+          <span>📖</span>
+          <span>恋爱画册</span>
         </button>
       </div>
     </header>
 
-    <!-- 玩家列表栏 (房间人员、头像、分数，开局后自动隐藏准备按钮) -->
-    <section class="player-list-bar" id="playerListBar">
-      <div class="players-chips-container" id="playersChipsContainer">
-        <!-- 动态生成玩家卡片 -->
+    <!-- 恋爱里程碑悬浮挂件 (支持轻触自定义恋爱日) -->
+    <section class="milestone-banner" id="anniversaryBanner" title="点击可设置恋爱起始纪念日">
+      <div class="couple-avatar-group">
+        <div class="avatar-bubble avatar-girl" title="婷婷">🐶</div>
+        <div class="avatar-bubble avatar-boy" title="宝贝">🐱</div>
       </div>
-      <button class="ready-action-btn" id="readyActionBtn">❤️ 我准备好了</button>
+      <div class="milestone-info">
+        <div class="milestone-subtitle">
+          <span class="online-dot"></span>
+          <span>双人连线 · 甜蜜陪伴中</span>
+        </div>
+        <div class="milestone-title">
+          我们相恋的第 <span class="days-highlight" id="anniversaryDays">520</span> 天
+        </div>
+      </div>
+      <div class="milestone-arrow" title="设置日期">✎</div>
     </section>
 
-    <!-- 题目与进阶提示横幅 -->
-    <section class="topic-banner" id="topicBanner">
-      <div class="banner-top-row">
-        <div class="badge-group">
-          <span class="role-badge" id="roleBadge">等待准备</span>
-          <!-- 暂停功能按钮 (双人自由涂鸦) -->
-          <button class="pause-toggle-btn" id="pauseBtn" title="暂停游戏/双人涂鸦" style="display: none;">
-            ⏸️ 暂停
-          </button>
-        </div>
-        <div class="timer-box" id="timerBox">
-          <span id="timerText">--</span>s
-        </div>
+    <!-- 核心互动大厅卡片矩阵 -->
+    <main>
+      <div class="lobby-section-title">
+        <span>✨</span>
+        <span>情侣专属互动大厅</span>
       </div>
 
-      <div class="banner-bottom-row">
-        <span class="topic-word" id="topicWord">首次进房双方点击【准备】，即可全自动畅玩！</span>
-      </div>
-
-      <!-- 进阶提示区域 -->
-      <div class="hint-container" id="hintContainer" style="display: none;">
-        <span class="hint-placeholder" id="hintPlaceholder">💡 进阶提示：开局30秒后解锁线索①...</span>
-      </div>
-    </section>
-
-    <!-- 主画板区域 -->
-    <main class="canvas-wrapper">
-      <div class="canvas-container" id="canvasContainer">
-        <canvas id="paintCanvas"></canvas>
-        <div class="reaction-layer" id="reactionLayer"></div>
-      </div>
-
-      <!-- 画笔工具栏 -->
-      <div class="tools-bar" id="toolsBar">
-        <div class="color-palette">
-          <button class="color-dot active" data-color="#2d3436" style="background: #2d3436;"></button>
-          <button class="color-dot" data-color="#ff4757" style="background: #ff4757;"></button>
-          <button class="color-dot" data-color="#ff6b81" style="background: #ff6b81;"></button>
-          <button class="color-dot" data-color="#ffa502" style="background: #ffa502;"></button>
-          <button class="color-dot" data-color="#2ed573" style="background: #2ed573;"></button>
-          <button class="color-dot" data-color="#1e90ff" style="background: #1e90ff;"></button>
-          <button class="color-dot" data-color="#8854d0" style="background: #8854d0;"></button>
-          <button class="color-dot" data-color="#795548" style="background: #795548;"></button>
+      <div class="cards-grid">
+        <!-- 核心功能 1：你画我猜 (已就绪·立即畅玩) -->
+        <div class="feature-card card-featured">
+          <div class="card-top">
+            <div class="card-icon-box">🎨</div>
+            <div class="card-tag tag-ready">
+              <span>⚡</span>
+              <span>立即畅玩</span>
+            </div>
+          </div>
+          <div class="card-content">
+            <h3>你画我猜 · 默契大作画</h3>
+            <p>实时双人画板连线 · 500道专属回忆词库 · 双人暂停自由涂鸦 · 永久拍立得画册</p>
+          </div>
+          <div class="card-action-row">
+            <button class="primary-enter-btn" id="quickEnterBtn">
+              <span>进入房间 (sweet520)</span>
+              <span>➜</span>
+            </button>
+            <button class="custom-room-btn" id="customRoomBtn">
+              自定义房间
+            </button>
+          </div>
         </div>
 
-        <div class="action-tools">
-          <button class="tool-btn eraser-btn" id="eraserBtn" title="橡皮擦">🧹 橡皮</button>
-          <button class="tool-btn clear-btn" id="clearBtn" title="清空画板">🗑️ 清屏</button>
+        <!-- 规划中功能 2：恋爱手账 & 纪念日 -->
+        <div class="feature-card card-disabled card-upcoming-trigger" 
+             data-feature="📖 恋爱手账 & 纪念日" 
+             data-desc="打卡每一个心动瞬间，记录两人甜蜜日常与重要纪念日倒数～ 正在加急开发中，敬请期待！">
+          <div class="card-top">
+            <div class="card-icon-box">📖</div>
+            <div class="card-tag tag-upcoming">筹备中</div>
+          </div>
+          <div class="card-content">
+            <h3>恋爱手账 & 纪念日</h3>
+            <p>心动日常点滴记录 · 独家相册与回忆时光轴 · 恋爱倒数日提醒</p>
+          </div>
+        </div>
+
+        <!-- 规划中功能 3：情侣飞行棋 & 默契考验 -->
+        <div class="feature-card card-disabled card-upcoming-trigger" 
+             data-feature="🎲 情侣飞行棋 & 默契大考验" 
+             data-desc="情侣双人投骰大冒险、100个默契灵魂拷问小游戏～ 正在精心筹备中，马上与你们见面！">
+          <div class="card-top">
+            <div class="card-icon-box">🎲</div>
+            <div class="card-tag tag-upcoming">筹备中</div>
+          </div>
+          <div class="card-content">
+            <h3>情侣飞行棋 & 默契考验</h3>
+            <p>双人投骰心动冒险 · 真心话小惩罚 · 100个专属默契问答</p>
+          </div>
+        </div>
+
+        <!-- 规划中功能 4：心愿清单 & 时光胶囊 -->
+        <div class="feature-card card-disabled card-upcoming-trigger" 
+             data-feature="💌 心愿清单 & 时光胶囊信箱" 
+             data-desc="一起完成的100件浪漫小事打卡，封存写给未来某一天的慢递信件～ 即将浪漫上线！">
+          <div class="card-top">
+            <div class="card-icon-box">💌</div>
+            <div class="card-tag tag-upcoming">筹备中</div>
+          </div>
+          <div class="card-content">
+            <h3>心愿清单 & 时光胶囊</h3>
+            <p>情侣必做的100件小事 · 专属悄悄话留言板 · 未来的时光信箱</p>
+          </div>
         </div>
       </div>
     </main>
 
-    <!-- 底部互动与猜词区域 -->
-    <footer class="interaction-footer">
-      <div class="quick-reactions">
-        <button class="reaction-btn" data-emoji="🎨" data-text="灵魂画手上线了！">🎨 灵魂画手</button>
-        <button class="reaction-btn" data-emoji="🤔" data-text="这是啥呀完全看不懂~">🤔 这是啥呀</button>
-        <button class="reaction-btn" data-emoji="🥺" data-text="给点提示嘛宝贝~">🥺 给点提示</button>
-        <button class="reaction-btn" data-emoji="💡" data-text="我快猜到了！">💡 快猜到了</button>
-        <button class="reaction-btn" data-emoji="💯" data-text="太像了太神了！">💯 绝了太像了</button>
-      </div>
-
-      <div class="chat-guess-area">
-        <div class="chat-bubble-stream" id="chatStream">
-          <div class="chat-hint">猜词记录将在此展示~</div>
-        </div>
-
-        <form class="guess-form" id="guessForm">
-          <input 
-            type="text" 
-            id="guessInput" 
-            class="guess-input" 
-            placeholder="输入你猜的词，回车发送..." 
-            autocomplete="off"
-            maxlength="20"
-          >
-          <button type="submit" class="send-btn" id="sendBtn">发送</button>
-        </form>
+    <!-- 底部暖心寄语 -->
+    <footer class="footer-bar">
+      <div class="quote-bubble">
+        <span>🐾</span>
+        <span id="quoteText">每一次下笔，都是属于我们两人的心有灵犀 💕</span>
       </div>
     </footer>
-
-    <!-- 1. 登录与选头像弹窗 -->
-    <div class="modal-overlay" id="nameModal">
-      <div class="modal-card">
-        <h3>💕 欢迎进入专属小世界</h3>
-        <p class="modal-sub">第一步：挑选一个可爱的专属头像</p>
-        
-        <div class="avatar-grid" id="avatarGrid">
-          <button class="avatar-btn active" data-avatar="🐱">🐱</button>
-          <button class="avatar-btn" data-avatar="🐶">🐶</button>
-          <button class="avatar-btn" data-avatar="🐰">🐰</button>
-          <button class="avatar-btn" data-avatar="🐻">🐻</button>
-          <button class="avatar-btn" data-avatar="🐼">🐼</button>
-          <button class="avatar-btn" data-avatar="🦊">🦊</button>
-          <button class="avatar-btn" data-avatar="🐨">🐨</button>
-          <button class="avatar-btn" data-avatar="🐷">🐷</button>
-          <button class="avatar-btn" data-avatar="🐥">🐥</button>
-          <button class="avatar-btn" data-avatar="🦄">🦄</button>
-          <button class="avatar-btn" data-avatar="🐸">🐸</button>
-          <button class="avatar-btn" data-avatar="🐯">🐯</button>
-        </div>
-
-        <p class="modal-sub">第二步：输入你的专属昵称</p>
-        <input type="text" id="nameInput" class="modal-input" placeholder="例如：大聪明 / 仙女宝贝" maxlength="10">
-        <button class="primary-btn" id="confirmNameBtn">确认进入游戏</button>
-      </div>
-    </div>
-
-    <!-- 2. 开局画手自主选词弹窗 (500词海量随机 4选1 + 换一批) -->
-    <div class="modal-overlay" id="wordSelectModal" style="display: none;">
-      <div class="modal-card select-word-card">
-        <div class="modal-header-with-timer">
-          <span class="modal-title">🎨 请挑选你要画的题目</span>
-          <span class="select-timer-badge" id="selectTimerBadge">⏱️ 15s</span>
-        </div>
-        <p class="select-hint">点击卡片选定（下方附带对方会收到的进阶线索）：</p>
-
-        <div class="candidate-words-grid" id="candidateWordsGrid">
-          <!-- 动态生成 4 张卡片 -->
-        </div>
-
-        <button class="refresh-words-btn" id="refreshWordsBtn">
-          🔄 都不满意？换一批新词 (再来4个)
-        </button>
-      </div>
-    </div>
-
-    <!-- 3. 猜题人等待画手选词弹窗 -->
-    <div class="modal-overlay" id="guesserWaitingModal" style="display: none;">
-      <div class="modal-card">
-        <div class="waiting-avatar" id="waitingDrawerAvatar">🎨</div>
-        <h3 id="waitingDrawerTitle">画手正在选词中...</h3>
-        <p class="modal-sub">请准备好你的火眼金睛，马上开画！</p>
-        <div class="select-timer-badge" id="guesserWaitTimer">⏱️ 15s</div>
-      </div>
-    </div>
-
-    <!-- 4. 投喂专属新词弹窗 -->
-    <div class="modal-overlay" id="wordModal" style="display: none;">
-      <div class="modal-card">
-        <h3>💌 投喂属于你们的专属回忆</h3>
-        <p>输入只有你们懂的梗、去过的地方或美食：</p>
-        <input type="text" id="newWordInput" class="modal-input" placeholder="例如：第一次喝的奶茶" maxlength="16">
-        <div class="modal-actions">
-          <button class="cancel-btn" id="closeWordModalBtn">取消</button>
-          <button class="primary-btn" id="submitWordBtn">悄悄存入词库</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 5. 猜中胜利：拍立得画作回忆卡弹窗 -->
-    <div class="modal-overlay" id="victoryModal" style="display: none;">
-      <div class="modal-card polaroid-card">
-        <button class="close-card-btn" id="closeVictoryBtn" title="关闭弹窗">✕</button>
-        <div class="polaroid-header">
-          <span class="heart-icon">💖</span>
-          <h4>心有灵犀！猜中啦！</h4>
-        </div>
-        
-        <div class="polaroid-img-wrapper">
-          <img id="polaroidImage" src="" alt="画作回忆卡">
-        </div>
-
-        <p class="polaroid-tip">📱 手机端长按上方图片即可保存到相册</p>
-
-        <!-- 自主选择下一局画还是猜 -->
-        <div class="role-choice-card" id="roleChoiceCard">
-          <div class="choice-title">下局想当什么？（可自由挑选）</div>
-          <div class="choice-buttons">
-            <button class="choice-role-btn" id="chooseDrawerBtn">🎨 我想画画</button>
-            <button class="choice-role-btn" id="chooseGuesserBtn">🤔 我想猜题</button>
-          </div>
-          <div class="choice-status" id="myChoiceStatus">（双方未选或冲突时自动轮流互换）</div>
-        </div>
-        
-        <div class="next-round-countdown" id="nextRoundTimer">
-          下一局将在 <span>6</span> 秒后开始...
-        </div>
-      </div>
-    </div>
-
-    <!-- 6. 恋爱画册弹窗 (历史画作瀑布流) -->
-    <div class="modal-overlay" id="galleryModal" style="display: none;">
-      <div class="modal-card gallery-modal-card">
-        <div class="gallery-header">
-          <h3>📖 我们的恋爱画册</h3>
-          <button class="close-gallery-btn" id="closeGalleryBtn">✕</button>
-        </div>
-        <p class="gallery-tip">手机本地永久保存，点击卡片可查看大图详情并返回~</p>
-
-        <div class="gallery-grid" id="galleryGrid">
-          <!-- 动态加载历史画作图片 -->
-        </div>
-
-        <button class="clear-gallery-btn" id="clearGalleryBtn" style="display: none;">清空本地画册</button>
-      </div>
-    </div>
-
-    <!-- 7. 画册专属大图预览弹窗 (解决查看大图无法返回的问题) -->
-    <div class="modal-overlay" id="imagePreviewModal" style="display: none;">
-      <div class="modal-card preview-modal-card">
-        <div class="preview-header">
-          <button class="back-pill-btn" id="closePreviewBtn">← 返回画册</button>
-          <span class="preview-title" id="previewTitle">画作详情</span>
-        </div>
-        
-        <div class="preview-img-wrapper">
-          <img id="previewModalImage" src="" alt="大图详情">
-        </div>
-
-        <p class="preview-tip">📱 手机端长按图片可直接保存到相册</p>
-      </div>
-    </div>
-
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="js/app.js"></script>
+  <!-- 1. 纪念日设置弹窗 -->
+  <div class="modal-overlay" id="anniversaryModal">
+    <div class="modal-dialog">
+      <div class="modal-icon">💑</div>
+      <div class="modal-title">设置恋爱起始纪念日</div>
+      <div class="modal-desc">选择你们在一起的那一天，主页将自动精准计算相恋天数哦～</div>
+      <input type="date" class="modal-input" id="anniversaryInput">
+      <div class="modal-btn-row">
+        <button class="modal-btn modal-btn-cancel" id="cancelAnniversaryBtn">取消</button>
+        <button class="modal-btn modal-btn-primary" id="saveAnniversaryBtn">保存纪念日</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. 自定义房间号弹窗 -->
+  <div class="modal-overlay" id="roomModal">
+    <div class="modal-dialog">
+      <div class="modal-icon">🗝️</div>
+      <div class="modal-title">自定义游戏房间</div>
+      <div class="modal-desc">输入属于你们二人的专属房间号（双方输入相同房间号即可连线）：</div>
+      <input type="text" class="modal-input" id="roomInput" placeholder="例如: tingting520" maxlength="20">
+      <div class="modal-btn-row">
+        <button class="modal-btn modal-btn-cancel" id="cancelRoomBtn">取消</button>
+        <button class="modal-btn modal-btn-primary" id="enterRoomConfirmBtn">立即连线进入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. 筹备中功能温馨提示弹窗 -->
+  <div class="modal-overlay" id="upcomingModal">
+    <div class="modal-dialog">
+      <div class="modal-icon">🧁</div>
+      <div class="modal-title" id="upcomingModalTitle">功能筹备中</div>
+      <div class="modal-desc" id="upcomingModalDesc">开发者正在加急为你们二人定制中，马上就会上线！</div>
+      <button class="modal-btn modal-btn-primary" id="closeUpcomingBtn">好的，等你们上线 💕</button>
+    </div>
+  </div>
+
+  <!-- 4. 大厅画册预览弹窗 -->
+  <div class="modal-overlay" id="lobbyGalleryModal">
+    <div class="modal-dialog gallery-dialog">
+      <div class="modal-title">📖 我们的恋爱画册</div>
+      <div class="modal-desc">这里永久珍藏着你们在「你画我猜」中默契通关的每一幅画作：</div>
+      <div id="emptyGalleryTip" style="display:none; color:#9CA3AF; padding:20px 0; font-size:13px;">
+        还没有保存的画作哦，快去游戏中画一幅吧~ 🎨
+      </div>
+      <div class="gallery-grid" id="lobbyGalleryGrid"></div>
+      <div style="margin-top:14px;">
+        <button class="modal-btn modal-btn-cancel" id="closeLobbyGalleryBtn" style="width:100%;">返回大厅</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/home.js"></script>
 </body>
 </html>

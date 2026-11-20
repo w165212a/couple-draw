@@ -171,15 +171,11 @@ function joinGame() {
 
 if (homeNavBtn) {
   homeNavBtn.addEventListener('click', (e) => {
-    if (isGameActive && !confirm('正在游戏中，确定要返回情侣小天地首页吗？')) {
+    if (isGameActive && !confirm('正在游戏中，确定要返回情侣小世界大厅吗？')) {
       e.preventDefault();
       return;
     }
-    // 尚未部署单独首页时给予温馨提示
-    if (location.pathname === '/' || location.pathname.endsWith('index.html')) {
-      e.preventDefault();
-      showToast('🏠 首页返回按钮已就绪！选定心仪设计方案后即可直达专属大厅～');
-    }
+    // 正常导航到首页大厅 /
   });
 }
 

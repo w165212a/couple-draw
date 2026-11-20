@@ -1,0 +1,550 @@
+:root {
+  --primary-pink: #FF6B8B;
+  --primary-light: #FFF0F3;
+  --secondary-accent: #7E22CE;
+  --text-main: #2D3748;
+  --text-muted: #718096;
+  --bg-overlay: rgba(255, 255, 255, 0.65);
+  --glass-card-bg: rgba(255, 255, 255, 0.78);
+  --glass-card-border: rgba(255, 255, 255, 0.9);
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 16px 36px rgba(255, 107, 139, 0.18);
+  --radius-xl: 24px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  color: var(--text-main);
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  position: relative;
+  background-color: #FAF5F0;
+  overflow-x: hidden;
+}
+
+/* 全屏沉浸式背景与水彩光影 */
+.bg-canvas-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -2;
+  background: url('/images/home_bg.jpg') center top / cover no-repeat;
+  filter: saturate(1.05);
+}
+
+.bg-overlay-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.4) 0%, 
+    rgba(255, 250, 246, 0.72) 40%, 
+    rgba(255, 245, 240, 0.92) 100%
+  );
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* 主容器 */
+.home-container {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: env(safe-area-inset-top, 20px) 18px env(safe-area-inset-bottom, 24px) 18px;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 顶部情侣状态与恋爱计时栏 */
+.top-nav {
+  padding: 16px 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  padding: 6px 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--glass-card-border);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.04);
+}
+
+.brand-heart {
+  color: var(--primary-pink);
+  font-size: 16px;
+  animation: pulseHeart 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseHeart {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.22); }
+}
+
+.brand-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #2D3748;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-pill-btn {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid var(--glass-card-border);
+  backdrop-filter: blur(10px);
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.nav-pill-btn:active {
+  transform: scale(0.95);
+}
+
+/* 恋爱里程碑卡片 */
+.milestone-banner {
+  margin: 14px 0 20px;
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-card-border);
+  border-radius: var(--radius-xl);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.milestone-banner:active {
+  transform: scale(0.98);
+}
+
+.couple-avatar-group {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-bubble {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #FFF;
+  border: 2px solid #FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+}
+
+.avatar-girl {
+  background: #FFE4E6;
+  z-index: 1;
+}
+
+.avatar-boy {
+  background: #E0E7FF;
+  margin-left: -12px;
+  z-index: 2;
+}
+
+.milestone-info {
+  flex: 1;
+  margin-left: 14px;
+}
+
+.milestone-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.online-dot {
+  width: 7px;
+  height: 7px;
+  background: #10B981;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px #10B981;
+}
+
+.milestone-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: #1F2937;
+  margin-top: 2px;
+}
+
+.days-highlight {
+  color: var(--primary-pink);
+  font-size: 22px;
+  font-family: -apple-system, "SF Pro Display", sans-serif;
+  margin: 0 2px;
+}
+
+.milestone-arrow {
+  color: #A0AEC0;
+  font-size: 14px;
+}
+
+/* 核心功能大厅网格 */
+.lobby-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 520px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .card-featured {
+    grid-column: span 2;
+  }
+}
+
+/* 功能卡片通用样式 */
+.feature-card {
+  background: var(--glass-card-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-card-border);
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-decoration: none;
+  color: inherit;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(255, 107, 139, 0.35);
+}
+
+.feature-card:active {
+  transform: scale(0.98);
+}
+
+/* 已激活推荐卡片：你画我猜 */
+.card-featured {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 240, 245, 0.88) 100%);
+  border: 1.5px solid rgba(255, 107, 139, 0.35);
+  box-shadow: 0 12px 32px rgba(255, 107, 139, 0.12);
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.card-icon-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: #FFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.card-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+}
+
+.tag-ready {
+  background: #FFE4E6;
+  color: #E11D48;
+  border: 1px solid rgba(225, 29, 72, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tag-upcoming {
+  background: rgba(243, 244, 246, 0.8);
+  color: #6B7280;
+  border: 1px solid rgba(209, 213, 219, 0.6);
+}
+
+.card-content h3 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1F2937;
+  margin-bottom: 4px;
+}
+
+.card-content p {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* 按钮与对局快捷入口 */
+.card-action-row {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary-enter-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #FF6B8B 0%, #FF8E53 100%);
+  color: #FFF;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 6px 18px rgba(255, 107, 139, 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.primary-enter-btn:active {
+  transform: scale(0.96);
+}
+
+.custom-room-btn {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 107, 139, 0.3);
+  color: var(--primary-pink);
+  border-radius: var(--radius-pill);
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* 筹备中卡片样式 */
+.card-disabled {
+  opacity: 0.88;
+}
+
+.card-disabled:hover {
+  border-color: rgba(160, 174, 192, 0.4);
+}
+
+/* 底部温暖寄语与画册入口 */
+.footer-bar {
+  margin-top: auto;
+  padding: 24px 0 10px;
+  text-align: center;
+}
+
+.quote-bubble {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  color: #4B5563;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+}
+
+/* 弹窗通用样式 */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.38);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-dialog {
+  background: #FFF;
+  width: 100%;
+  max-width: 400px;
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  animation: modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  0% { transform: scale(0.9); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-icon {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1F2937;
+  margin-bottom: 8px;
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid #E5E7EB;
+  border-radius: var(--radius-lg);
+  font-size: 14px;
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color 0.2s;
+}
+
+.modal-input:focus {
+  border-color: var(--primary-pink);
+}
+
+.modal-btn-row {
+  display: flex;
+  gap: 10px;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 11px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+}
+
+.modal-btn-cancel {
+  background: #F3F4F6;
+  color: #4B5563;
+}
+
+.modal-btn-primary {
+  background: linear-gradient(135deg, #FF6B8B 0%, #FF8E53 100%);
+  color: #FFF;
+  box-shadow: 0 4px 12px rgba(255, 107, 139, 0.3);
+}
+
+/* 恋爱画册弹窗样式 (直接复用本地画作) */
+.gallery-dialog {
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  overflow-y: auto;
+  padding: 10px 4px;
+  max-height: 50vh;
+}
+
+.polaroid-card {
+  background: #FFF;
+  padding: 8px 8px 12px 8px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  border: 1px solid #E2E8F0;
+  text-align: center;
+}
+
+.polaroid-card img {
+  width: 100%;
+  height: 120px;
+  object-fit: contain;
+  background: #FAF5F0;
+  border-radius: 4px;
+}
+
+.polaroid-card .word-title {
+  margin-top: 6px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #2D3748;
+}
