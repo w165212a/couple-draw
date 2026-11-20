@@ -520,6 +520,51 @@ html, body {
   box-shadow: 0 0 0 2px var(--primary-pink);
 }
 
+/* 画笔粗细调节选择器 */
+.brush-size-palette {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #F8F9FA;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #ECECEC;
+}
+
+.size-dot-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.size-dot-btn:active {
+  transform: scale(0.92);
+}
+
+.size-dot-btn.active {
+  background: #FFF;
+  border-color: #FECDD3;
+  box-shadow: 0 1px 4px rgba(255, 107, 129, 0.25);
+}
+
+.size-dot {
+  background: #2D3748;
+  border-radius: 50%;
+  display: block;
+}
+
+.dot-sm { width: 4px; height: 4px; }
+.dot-md { width: 7px; height: 7px; }
+.dot-lg { width: 11px; height: 11px; }
+.dot-xl { width: 16px; height: 16px; }
+
 .action-tools {
   display: flex;
   gap: 5px;
@@ -873,6 +918,98 @@ html, body {
   transform: scale(0.98);
 }
 
+.select-word-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.select-word-actions button {
+  flex: 1;
+}
+
+.custom-word-trigger-btn {
+  background: #FFF1F2;
+  color: var(--primary-pink);
+  border: 1px solid #FECDD3;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.custom-word-trigger-btn:active {
+  background: #FFE4E6;
+  transform: scale(0.98);
+}
+
+/* 自主定词面板 */
+.custom-topic-box {
+  background: #FFF9FA;
+  border: 1.5px dashed #FECDD3;
+  border-radius: var(--radius-md);
+  padding: 12px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: left;
+  animation: popIn 0.2s ease;
+}
+
+.custom-topic-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #BE185D;
+}
+
+.custom-topic-input, .custom-hint-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1.5px solid #FBCFE8;
+  border-radius: 10px;
+  font-size: 13px;
+  outline: none;
+  background: #FFF;
+}
+
+.custom-topic-input:focus, .custom-hint-input:focus {
+  border-color: var(--primary-pink);
+}
+
+.custom-topic-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.custom-topic-cancel-btn {
+  flex: 1;
+  background: #F3F4F6;
+  color: #4B5563;
+  border: none;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.custom-topic-confirm-btn {
+  flex: 1.6;
+  background: linear-gradient(135deg, #FF6B8B 0%, #FF8E53 100%);
+  color: #FFF;
+  border: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 107, 139, 0.3);
+}
+
 .waiting-avatar {
   font-size: 42px;
   animation: pulse 1.5s infinite;
@@ -1149,4 +1286,146 @@ html, body {
   color: var(--text-muted);
   text-align: center;
   margin-top: 2px;
+}
+
+/* ==================== PAD / 平板电脑自适应适配 ==================== */
+@media (min-width: 768px) {
+  .app-container {
+    max-width: 880px;
+    padding: 14px 20px;
+  }
+
+  .header {
+    padding: 8px 0;
+  }
+
+  .home-nav-btn, .room-pill, .gallery-pill-btn, .icon-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+    border-radius: 22px;
+  }
+
+  .topic-banner {
+    padding: 12px 18px;
+  }
+
+  .topic-word {
+    font-size: 20px;
+  }
+
+  .canvas-container {
+    border-radius: 28px;
+    border-width: 3px;
+  }
+
+  .tools-bar {
+    padding: 8px 16px;
+    gap: 12px;
+  }
+
+  .color-dot {
+    width: 28px;
+    height: 28px;
+  }
+
+  .brush-size-palette {
+    padding: 4px 8px;
+    gap: 6px;
+  }
+
+  .size-dot-btn {
+    width: 30px;
+    height: 30px;
+  }
+
+  .tool-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+
+  .quick-reactions {
+    gap: 8px;
+  }
+
+  .reaction-btn {
+    padding: 7px 14px;
+    font-size: 13px;
+  }
+
+  .chat-guess-area {
+    height: 140px;
+  }
+
+  .guess-input {
+    font-size: 15px;
+    padding: 10px 16px;
+  }
+
+  .send-btn {
+    padding: 10px 22px;
+    font-size: 15px;
+  }
+
+  .candidate-words-grid {
+    gap: 14px;
+  }
+
+  .candidate-card {
+    padding: 14px 10px;
+  }
+
+  .candidate-card .card-word {
+    font-size: 18px;
+  }
+}
+
+/* PAD 横屏（Landscape）专属双栏工作室布局 */
+@media (min-width: 880px) and (orientation: landscape) {
+  .app-container {
+    max-width: 1120px;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    grid-template-rows: auto auto 1fr;
+    column-gap: 18px;
+    row-gap: 8px;
+    height: 100vh;
+    padding: 10px 20px;
+  }
+
+  .header {
+    grid-column: 1 / -1;
+  }
+
+  .player-list-bar {
+    grid-column: 2;
+    grid-row: 2;
+    margin-bottom: 0;
+  }
+
+  .topic-banner {
+    grid-column: 1;
+    grid-row: 2;
+    margin-bottom: 0;
+  }
+
+  .canvas-wrapper {
+    grid-column: 1;
+    grid-row: 3;
+    margin: 4px 0 0 0;
+    height: 100%;
+  }
+
+  .interaction-footer {
+    grid-column: 2;
+    grid-row: 3;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    margin: 4px 0 0 0;
+  }
+
+  .chat-guess-area {
+    flex: 1;
+    height: auto;
+  }
 }

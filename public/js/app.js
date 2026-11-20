@@ -29,6 +29,7 @@ const reactionLayer = document.getElementById('reactionLayer');
 
 const toolsBar = document.getElementById('toolsBar');
 const colorDots = document.querySelectorAll('.color-dot');
+const sizeDotBtns = document.querySelectorAll('.size-dot-btn');
 const eraserBtn = document.getElementById('eraserBtn');
 const clearBtn = document.getElementById('clearBtn');
 
@@ -49,6 +50,12 @@ const wordSelectModal = document.getElementById('wordSelectModal');
 const selectTimerBadge = document.getElementById('selectTimerBadge');
 const candidateWordsGrid = document.getElementById('candidateWordsGrid');
 const refreshWordsBtn = document.getElementById('refreshWordsBtn');
+const customWordTriggerBtn = document.getElementById('customWordTriggerBtn');
+const customTopicBox = document.getElementById('customTopicBox');
+const customTopicInput = document.getElementById('customTopicInput');
+const customHintInput = document.getElementById('customHintInput');
+const cancelCustomTopicBtn = document.getElementById('cancelCustomTopicBtn');
+const confirmCustomTopicBtn = document.getElementById('confirmCustomTopicBtn');
 
 const guesserWaitingModal = document.getElementById('guesserWaitingModal');
 const waitingDrawerAvatar = document.getElementById('waitingDrawerAvatar');
@@ -244,6 +251,46 @@ refreshWordsBtn.addEventListener('click', () => {
   socket.emit('refresh_candidates');
 });
 
+// 自定义题目交互
+if (customWordTriggerBtn) {
+  customWordTriggerBtn.addEventListener('click', () => {
+    customTopicBox.style.display = 'flex';
+    setTimeout(() => customTopicInput.focus(), 100);
+  });
+}
+
+if (cancelCustomTopicBtn) {
+  cancelCustomTopicBtn.addEventListener('click', () => {
+    customTopicBox.style.display = 'none';
+  });
+}
+
+if (confirmCustomTopicBtn) {
+  confirmCustomTopicBtn.addEventListener('click', () => {
+    const customWord = customTopicInput.value.trim();
+    if (!customWord) {
+      alert('请输入你想画的自定义题目哦~');
+      return;
+    }
+    if (customWord.length > 20) {
+      alert('题目不能超过20个字哦~');
+      return;
+    }
+    const customHint = customHintInput.value.trim() || '专属甜蜜回忆';
+    socket.emit('choose_word', {
+      word: customWord,
+      hint1: customHint,
+      hint2: '心有灵犀一点通'
+    });
+    wordSelectModal.style.display = 'none';
+    customTopicBox.style.display = 'none';
+  });
+
+  customTopicInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmCustomTopicBtn.click();
+  });
+}
+
 // 5. 画板高分屏适配与绘图同步
 function setupCanvas() {
   const rect = canvasContainer.getBoundingClientRect();
@@ -318,7 +365,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (isNaN(coord.x) || isNaN(coord.y)) return;
 
   const strokeColor = isEraser ? '#FFFFFF' : currentColor;
-  const strokeSize = isEraser ? 16 : currentSize;
+  const strokeSize = isEraser ? Math.max(16, currentSize * 2.5) : currentSize;
 
   const action = {
     type: 'start',
@@ -340,7 +387,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (isNaN(coord.x) || isNaN(coord.y)) return;
 
   const strokeColor = isEraser ? '#FFFFFF' : currentColor;
-  const strokeSize = isEraser ? 16 : currentSize;
+  const strokeSize = isEraser ? Math.max(16, currentSize * 2.5) : currentSize;
 
   const action = {
     type: 'move',
@@ -377,6 +424,22 @@ colorDots.forEach(dot => {
     currentColor = dot.getAttribute('data-color');
     isEraser = false;
     eraserBtn.classList.remove('active');
+  });
+});
+
+// 画笔粗细切换
+sizeDotBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    sizeDotBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSize = parseInt(btn.getAttribute('data-size'), 10) || 3;
+    if (isEraser) {
+      isEraser = false;
+      eraserBtn.classList.remove('active');
+      colorDots.forEach(d => {
+        if (d.getAttribute('data-color') === currentColor) d.classList.add('active');
+      });
+    }
   });
 });
 
@@ -673,6 +736,9 @@ socket.on('room_info', ({ players, playerCount, state, gameStarted }) => {
 socket.on('pick_word_turn', ({ candidates, duration }) => {
   guesserWaitingModal.style.display = 'none';
   wordSelectModal.style.display = 'flex';
+  if (customTopicBox) customTopicBox.style.display = 'none';
+  if (customTopicInput) customTopicInput.value = '';
+  if (customHintInput) customHintInput.value = '';
   pauseBtn.style.display = 'none';
   selectTimerBadge.innerText = `⏱️ ${duration}s`;
   renderCandidateWords(candidates);

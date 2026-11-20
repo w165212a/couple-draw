@@ -87,6 +87,22 @@
           <button class="color-dot" data-color="#795548" style="background: #795548;"></button>
         </div>
 
+        <!-- 画笔粗细调节 -->
+        <div class="brush-size-palette" id="brushSizePalette" title="调节画笔粗细">
+          <button class="size-dot-btn active" data-size="3" title="细笔 (3px)">
+            <span class="size-dot dot-sm"></span>
+          </button>
+          <button class="size-dot-btn" data-size="7" title="中笔 (7px)">
+            <span class="size-dot dot-md"></span>
+          </button>
+          <button class="size-dot-btn" data-size="14" title="粗笔 (14px)">
+            <span class="size-dot dot-lg"></span>
+          </button>
+          <button class="size-dot-btn" data-size="24" title="特粗涂色 (24px)">
+            <span class="size-dot dot-xl"></span>
+          </button>
+        </div>
+
         <div class="action-tools">
           <button class="tool-btn eraser-btn" id="eraserBtn" title="橡皮擦">🧹 橡皮</button>
           <button class="tool-btn clear-btn" id="clearBtn" title="清空画板">🗑️ 清屏</button>
@@ -163,9 +179,25 @@
           <!-- 动态生成 4 张卡片 -->
         </div>
 
-        <button class="refresh-words-btn" id="refreshWordsBtn">
-          🔄 都不满意？换一批新词 (再来4个)
-        </button>
+        <div class="select-word-actions">
+          <button class="refresh-words-btn" id="refreshWordsBtn">
+            🔄 换一批新词 (再来4个)
+          </button>
+          <button class="custom-word-trigger-btn" id="customWordTriggerBtn">
+            ✍️ 我要自己出题
+          </button>
+        </div>
+
+        <!-- 自己出题输入面板（点击展开） -->
+        <div class="custom-topic-box" id="customTopicBox" style="display: none;">
+          <div class="custom-topic-title">✍️ 输入你想让对方猜的自定义题目：</div>
+          <input type="text" id="customTopicInput" class="custom-topic-input" placeholder="例如: 第一次牵手 / 烤红薯 / 做鬼脸" maxlength="15">
+          <input type="text" id="customHintInput" class="custom-hint-input" placeholder="可选提示: 例如【在海边散步时】" maxlength="20">
+          <div class="custom-topic-btn-row">
+            <button class="custom-topic-cancel-btn" id="cancelCustomTopicBtn">返回词库选择</button>
+            <button class="custom-topic-confirm-btn" id="confirmCustomTopicBtn">确认出题并开始画 🎨</button>
+          </div>
+        </div>
       </div>
     </div>
 
