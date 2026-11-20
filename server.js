@@ -26,7 +26,7 @@ function loadWords() {
     }
     wordBank = JSON.parse(raw);
     const count = (wordBank.words ? wordBank.words.length : 0);
-    console.log(`成功载入 500 词库，实际有效词汇条数: ${count}`);
+    console.log(`成功载入 1000 精选词库，实际有效词汇条数: ${count}`);
   } catch (err) {
     console.error('加载词库失败，使用备用词库:', err);
     wordBank = {
@@ -81,7 +81,7 @@ function getAllWordsPool() {
   return allPool;
 }
 
-// 从 500 个词库中真正随机挑出 4 个（支持换一批刷新）
+// 从 1000 个精选词库中真正随机挑出 4 个（支持换一批刷新）
 function getCandidateWords(count = 4, excludeWords = []) {
   const pool = getAllWordsPool();
   const filtered = pool.filter(item => !excludeWords.includes(item.word));

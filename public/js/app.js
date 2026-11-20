@@ -229,7 +229,7 @@ socket.on('pause_status_changed', (data) => {
   }
 });
 
-// 4. 画手自主选词 (500 词库海量随机 4选1 + 换一批)
+// 4. 画手自主选词 (1000 词库海量随机 4选1 + 换一批 + 自己定词)
 function renderCandidateWords(candidates) {
   candidateWordsGrid.innerHTML = '';
   candidates.forEach(c => {
