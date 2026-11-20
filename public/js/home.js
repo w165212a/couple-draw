@@ -1,4 +1,4 @@
-// 情侣小天地 · 首页大厅逻辑
+// 首页大厅逻辑
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. 兼容老链接：如果 URL 中包含 room 参数，直接自动重定向至对局页面
@@ -9,75 +9,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // 2. 纪念日计算与设置
-  initAnniversary();
-
-  // 3. 房间跳转逻辑
+  // 2. 房间跳转逻辑
   initRoomNavigation();
 
-  // 4. 筹备中卡片弹窗
+  // 3. 筹备中卡片弹窗
   initUpcomingCards();
 
-  // 5. 大厅恋爱画册弹窗
+  // 4. 大厅画册弹窗
   initGalleryModal();
 
-  // 6. 随机情侣每日甜甜寄语
+  // 5. 随机情侣每日甜甜寄语
   initDailyQuote();
 });
-
-// 纪念日计算
-function initAnniversary() {
-  const daysDisplay = document.getElementById('anniversaryDays');
-  const anniversaryBanner = document.getElementById('anniversaryBanner');
-  const anniversaryModal = document.getElementById('anniversaryModal');
-  const anniversaryInput = document.getElementById('anniversaryInput');
-  const saveAnniversaryBtn = document.getElementById('saveAnniversaryBtn');
-  const cancelAnniversaryBtn = document.getElementById('cancelAnniversaryBtn');
-
-  // 默认起始日期为 2025-01-01（若用户未设定）
-  let savedDate = localStorage.getItem('couple_anniversary_date');
-  if (!savedDate) {
-    savedDate = '2025-05-20';
-    localStorage.setItem('couple_anniversary_date', savedDate);
-  }
-
-  function updateDays() {
-    const start = new Date(savedDate);
-    const now = new Date();
-    const diffTime = Math.max(0, now - start);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    if (daysDisplay) {
-      daysDisplay.textContent = diffDays;
-    }
-  }
-  updateDays();
-
-  // 点击横幅自定义日期
-  if (anniversaryBanner && anniversaryModal) {
-    anniversaryBanner.addEventListener('click', () => {
-      anniversaryInput.value = savedDate;
-      anniversaryModal.style.display = 'flex';
-    });
-
-    cancelAnniversaryBtn.addEventListener('click', () => {
-      anniversaryModal.style.display = 'none';
-    });
-
-    saveAnniversaryBtn.addEventListener('click', () => {
-      const val = anniversaryInput.value;
-      if (val) {
-        savedDate = val;
-        localStorage.setItem('couple_anniversary_date', val);
-        updateDays();
-        anniversaryModal.style.display = 'none';
-      }
-    });
-
-    anniversaryModal.addEventListener('click', (e) => {
-      if (e.target === anniversaryModal) anniversaryModal.style.display = 'none';
-    });
-  }
-}
 
 // 房间快捷进入与自定义
 function initRoomNavigation() {

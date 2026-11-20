@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>🌸 我们的专属小世界 · 情侣互动大厅</title>
+  <title>🌸 我们的专属小世界</title>
   <link rel="stylesheet" href="/css/home.css">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌸</text></svg>">
 </head>
@@ -13,47 +13,24 @@
   <div class="bg-overlay-layer"></div>
 
   <div class="home-container">
-    <!-- 顶部导航与品牌状态 -->
+    <!-- 顶部导航与画册直达 -->
     <header class="top-nav">
       <div class="brand-badge">
         <span class="brand-heart">💕</span>
-        <span class="brand-title">专属互动小世界</span>
+        <span class="brand-title">专属小世界</span>
       </div>
 
       <div class="nav-actions">
-        <!-- 恋爱画册快捷直达 -->
+        <!-- 画册快捷直达 -->
         <button class="nav-pill-btn" id="openLobbyGalleryBtn" title="查看我们的画作回忆">
           <span>📖</span>
-          <span>恋爱画册</span>
+          <span>画册</span>
         </button>
       </div>
     </header>
 
-    <!-- 恋爱里程碑悬浮挂件 (支持轻触自定义恋爱日) -->
-    <section class="milestone-banner" id="anniversaryBanner" title="点击可设置恋爱起始纪念日">
-      <div class="couple-avatar-group">
-        <div class="avatar-bubble avatar-girl" title="婷婷">🐶</div>
-        <div class="avatar-bubble avatar-boy" title="宝贝">🐱</div>
-      </div>
-      <div class="milestone-info">
-        <div class="milestone-subtitle">
-          <span class="online-dot"></span>
-          <span>双人连线 · 甜蜜陪伴中</span>
-        </div>
-        <div class="milestone-title">
-          我们相恋的第 <span class="days-highlight" id="anniversaryDays">520</span> 天
-        </div>
-      </div>
-      <div class="milestone-arrow" title="设置日期">✎</div>
-    </section>
-
-    <!-- 核心互动大厅卡片矩阵 -->
-    <main>
-      <div class="lobby-section-title">
-        <span>✨</span>
-        <span>情侣专属互动大厅</span>
-      </div>
-
+    <!-- 核心功能卡片 -->
+    <main class="main-content">
       <div class="cards-grid">
         <!-- 核心功能 1：你画我猜 (已就绪·立即畅玩) -->
         <div class="feature-card card-featured">
@@ -70,7 +47,7 @@
           </div>
           <div class="card-action-row">
             <button class="primary-enter-btn" id="quickEnterBtn">
-              <span>进入房间 (sweet520)</span>
+              <span>进入房间</span>
               <span>➜</span>
             </button>
             <button class="custom-room-btn" id="customRoomBtn">
@@ -79,45 +56,17 @@
           </div>
         </div>
 
-        <!-- 规划中功能 2：恋爱手账 & 纪念日 -->
+        <!-- 核心功能 2：五子棋 (筹备中) -->
         <div class="feature-card card-disabled card-upcoming-trigger" 
-             data-feature="📖 恋爱手账 & 纪念日" 
-             data-desc="打卡每一个心动瞬间，记录两人甜蜜日常与重要纪念日倒数～ 正在加急开发中，敬请期待！">
+             data-feature="♟️ 双人五子棋对弈" 
+             data-desc="双人实时在线五子棋对战，支持黑白落子音效、悔棋求和与计时对决～ 正在挑选优质开源引擎设计中，敬请期待！">
           <div class="card-top">
-            <div class="card-icon-box">📖</div>
+            <div class="card-icon-box">♟️</div>
             <div class="card-tag tag-upcoming">筹备中</div>
           </div>
           <div class="card-content">
-            <h3>恋爱手账 & 纪念日</h3>
-            <p>心动日常点滴记录 · 独家相册与回忆时光轴 · 恋爱倒数日提醒</p>
-          </div>
-        </div>
-
-        <!-- 规划中功能 3：情侣飞行棋 & 默契考验 -->
-        <div class="feature-card card-disabled card-upcoming-trigger" 
-             data-feature="🎲 情侣飞行棋 & 默契大考验" 
-             data-desc="情侣双人投骰大冒险、100个默契灵魂拷问小游戏～ 正在精心筹备中，马上与你们见面！">
-          <div class="card-top">
-            <div class="card-icon-box">🎲</div>
-            <div class="card-tag tag-upcoming">筹备中</div>
-          </div>
-          <div class="card-content">
-            <h3>情侣飞行棋 & 默契考验</h3>
-            <p>双人投骰心动冒险 · 真心话小惩罚 · 100个专属默契问答</p>
-          </div>
-        </div>
-
-        <!-- 规划中功能 4：心愿清单 & 时光胶囊 -->
-        <div class="feature-card card-disabled card-upcoming-trigger" 
-             data-feature="💌 心愿清单 & 时光胶囊信箱" 
-             data-desc="一起完成的100件浪漫小事打卡，封存写给未来某一天的慢递信件～ 即将浪漫上线！">
-          <div class="card-top">
-            <div class="card-icon-box">💌</div>
-            <div class="card-tag tag-upcoming">筹备中</div>
-          </div>
-          <div class="card-content">
-            <h3>心愿清单 & 时光胶囊</h3>
-            <p>情侣必做的100件小事 · 专属悄悄话留言板 · 未来的时光信箱</p>
+            <h3>五子棋 · 智力对弈</h3>
+            <p>双人实时在线对战 · 经典黑白棋局 · 悔棋求和 · 胜负战绩统计</p>
           </div>
         </div>
       </div>
@@ -132,21 +81,7 @@
     </footer>
   </div>
 
-  <!-- 1. 纪念日设置弹窗 -->
-  <div class="modal-overlay" id="anniversaryModal">
-    <div class="modal-dialog">
-      <div class="modal-icon">💑</div>
-      <div class="modal-title">设置恋爱起始纪念日</div>
-      <div class="modal-desc">选择你们在一起的那一天，主页将自动精准计算相恋天数哦～</div>
-      <input type="date" class="modal-input" id="anniversaryInput">
-      <div class="modal-btn-row">
-        <button class="modal-btn modal-btn-cancel" id="cancelAnniversaryBtn">取消</button>
-        <button class="modal-btn modal-btn-primary" id="saveAnniversaryBtn">保存纪念日</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. 自定义房间号弹窗 -->
+  <!-- 1. 自定义房间号弹窗 -->
   <div class="modal-overlay" id="roomModal">
     <div class="modal-dialog">
       <div class="modal-icon">🗝️</div>
@@ -160,20 +95,20 @@
     </div>
   </div>
 
-  <!-- 3. 筹备中功能温馨提示弹窗 -->
+  <!-- 2. 筹备中功能温馨提示弹窗 -->
   <div class="modal-overlay" id="upcomingModal">
     <div class="modal-dialog">
-      <div class="modal-icon">🧁</div>
+      <div class="modal-icon">♟️</div>
       <div class="modal-title" id="upcomingModalTitle">功能筹备中</div>
-      <div class="modal-desc" id="upcomingModalDesc">开发者正在加急为你们二人定制中，马上就会上线！</div>
+      <div class="modal-desc" id="upcomingModalDesc">五子棋小游戏正在紧锣密鼓设计中，马上就会上线！</div>
       <button class="modal-btn modal-btn-primary" id="closeUpcomingBtn">好的，等你们上线 💕</button>
     </div>
   </div>
 
-  <!-- 4. 大厅画册预览弹窗 -->
+  <!-- 3. 大厅画册预览弹窗 -->
   <div class="modal-overlay" id="lobbyGalleryModal">
     <div class="modal-dialog gallery-dialog">
-      <div class="modal-title">📖 我们的恋爱画册</div>
+      <div class="modal-title">📖 我们的画册</div>
       <div class="modal-desc">这里永久珍藏着你们在「你画我猜」中默契通关的每一幅画作：</div>
       <div id="emptyGalleryTip" style="display:none; color:#9CA3AF; padding:20px 0; font-size:13px;">
         还没有保存的画作哦，快去游戏中画一幅吧~ 🎨
